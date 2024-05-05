@@ -296,10 +296,6 @@ void function StrafeMovement(entity ai, entity player)
 	{
 		ads = 5
 	}
-	else
-	{
-		ads = 0
-	}
 
 	ai.EndSignal("OnDeath")
 	player.EndSignal("ChallengeTimeOver")
@@ -315,8 +311,12 @@ void function StrafeMovement(entity ai, entity player)
 	while(IsValid(ai))
 	{
 		int randDir = RandomIntRangeInclusive(1,10)
-		int randAds = RandomIntRangeInclusive(1,ads)
 		int randStrafe = RandomIntRangeInclusive(1,10)
+		int randAds
+		if(ads)
+		{
+			int randAds = RandomIntRangeInclusive(1,ads)
+		}
 
 		ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
 		if(AimTrainer_STRAFING_SPEED == 0)
