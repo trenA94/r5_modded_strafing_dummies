@@ -315,7 +315,7 @@ void function StrafeMovement(entity ai, entity player)
 		int randAds
 		if(ads)
 		{
-			int randAds = RandomIntRangeInclusive(1,ads)
+			randAds = RandomIntRangeInclusive(1,ads)
 		}
 
 		ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
