@@ -287,14 +287,27 @@ void function StrafeMovement(entity ai, entity player)
 	int adsRepeat
 	float spd
 	float randTime
+	float switchSlow
 
-	if(AimTrainer_SPAWN_DISTANCE > 4 && AimTrainer_SPAWN_DISTANCE <= 8)
+	float aimTrainerSpd = AimTrainer_STRAFING_SPEED
+	float adsSlow = 0.75
+	if(aimTrainerSpd == 1)
+	{
+		aimTrainerSpd = 1.25
+		adsSlow = 0.5
+	}
+
+	if(AimTrainer_SPAWN_DISTANCE > 3 && AimTrainer_SPAWN_DISTANCE <= 7)
 	{
 		ads = 10
 	}
-	else if(AimTrainer_SPAWN_DISTANCE > 8)
+	else if(AimTrainer_SPAWN_DISTANCE > 7)
 	{
-		ads = 5
+		ads = 6
+	}
+	else
+	{
+		ads = 0
 	}
 
 	ai.EndSignal("OnDeath")
@@ -315,7 +328,7 @@ void function StrafeMovement(entity ai, entity player)
 		int randAds
 		if(ads)
 		{
-			randAds = RandomIntRangeInclusive(1,ads)
+			 randAds = RandomIntRangeInclusive(1,ads)
 		}
 
 		ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
@@ -327,7 +340,7 @@ void function StrafeMovement(entity ai, entity player)
 			
 		if(count == 15)
 		{
-			bias = RandomIntRangeInclusive(1,2)
+			bias = RandomIntRangeInclusive(1,3)
 			if(CoinFlip())
 			{
 				bias *= -1
@@ -348,82 +361,91 @@ void function StrafeMovement(entity ai, entity player)
 		{
 			adsRepeat = 0
 		}
-		if(ads && randAds > (ads-4))
+		else if(ads && randAds > (ads-4))
 		{
 			if(count2)
 			{
-				spd = AimTrainer_STRAFING_SPEED
+				spd = aimTrainerSpd
 				count2 = 0
 			}
 			else
 			{
-				spd = AimTrainer_STRAFING_SPEED*0.75
+				spd = aimTrainerSpd*adsSlow
 				count2++
 			}
 		}
 		else
 		{
-			spd = AimTrainer_STRAFING_SPEED
+			spd = aimTrainerSpd
 		}
 		
 		if(randStrafe > 6)
 		{
 			if(count3 == 2)
 			{
-				randTime = RandomFloatRange(0.15,0.2)
-				count3 = -2
+				randTime = RandomFloatRange(0.1,0.2)
+				count3 = 0
 			}
 			else
 			{
-				randTime = 0.01
+				randTime = RandomFloatRange(0.01,0.1)
 				adsRepeat = 1
 				count3++
 			}
 		}
 		else if(randStrafe > 2)
 		{
-			randTime = RandomFloatRange(0.15,0.2)
+			randTime = RandomFloatRange(0.1,0.2)
 		}
 		else
 		{
 			if(count4 == 2)
 			{
-				randTime = RandomFloatRange(0.15,0.2)
-				count4 = -1
+				randTime = RandomFloatRange(0.1,0.2)
+				count4 = 0
 			}
 			else
 			{
-				randTime = RandomFloatRange(0.2,0.25)
+				randTime = RandomFloatRange(0.2,0.3)
 				count4++
 			}
 		}
-
+		float now = Time()
+		float endTime = now + randTime
+		float randTime2 = RandomFloatRange(0.01,randTime)
+		float endTime2 = now + randTime2
 		if(curDir != lastDir)
 		{
 			ai.Anim_ScriptedPlayActivityByName(curDir, true, 0.1)
+			ai.Anim_SetPlaybackRate(0)
+			switchSlow = now + 0.25
 			lastDir = curDir
+			
 		}
 
-		float now = Time()
-		float endTime = now + randTime
+		float slowdown = 1
+		float slowdown2 = 1
+
 		while(now < endTime)
 		{
-			ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
+			if(now >= endTime2)
+			{
+				ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
+			}
+			if(now <= switchSlow)
+			{
+				slowdown = 1 - (1 * ((switchSlow - now)/switchSlow))
+			}
 			if(now <= slowed)
 			{
-				float slowdown = 0.4 * ((slowed - now)/slowed)
-				ai.Anim_SetPlaybackRate(spd * (1 - slowdown))
+				slowdown2 = 1 - (0.4 * ((slowed - now)/slowed))
 			}
-			else
-			{
-				ai.Anim_SetPlaybackRate(spd)
-			}
-				
+			ai.Anim_SetPlaybackRate(spd * slowdown * slowdown2)
 			WaitFrame()
 			now = Time()
 		}
 
-		if(randTime > 0.01)
+		if(randTime > 0.1)
 		{
 			count++
 		}
