@@ -412,20 +412,20 @@ void function StrafeMovement(entity ai, entity player)
 		}
 		float now = Time()
 		float endTime = now + randTime
-		float randTime2 = RandomFloatRange(0.01,randTime)
+		float randTime2 = RandomFloatRange(0,randTime+0.01)
 		float endTime2 = now + randTime2
 		if(curDir != lastDir)
 		{
 			ai.Anim_ScriptedPlayActivityByName(curDir, true, 0.1)
 			ai.Anim_SetPlaybackRate(0)
-			switchSlow = now + 0.25
+			switchSlow = Time() + 0.25
 			lastDir = curDir
 			
 		}
 
 		float slowdown = 1
 		float slowdown2 = 1
-
+		WaitFrame()
 		while(now < endTime)
 		{
 			if(now >= endTime2)
