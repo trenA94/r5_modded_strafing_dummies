@@ -1,6 +1,6 @@
 /*
 Flowstate Aim Trainer v1.0 - Made by CafeFPS (server, client, ui)
-Discord: Retículo Endoplasmático#5955 | Twitter: @CafeFPS
+Discord: @CafeFPS | Twitter: @CafeFPS
 Support me: https://ko-fi.com/r5r_colombia
 
 More credits:
@@ -62,6 +62,7 @@ global function StartChallenge5NewCClient
 global function StartChallenge6NewCClient
 global function StartChallenge7NewCClient
 global function StartChallenge8NewCClient
+global function StartChallenge9NewCClient
 global function SkipButtonResultsClient
 global function RestartButtonResultsClient
 
@@ -89,6 +90,8 @@ global function AimTrainer_QuickHint
 global function StartUpdatingArmorSwapLastTime
 
 global function SetWeaponSlot
+global function CoolCameraOnMenu
+global function ActuallyPutDefaultSettings
 string DesiredSlot = "p"
 
 struct{
@@ -118,7 +121,8 @@ void function Cl_ChallengesByColombia_Init()
 {
 	//Increase client command limit to 60
 	SetConVarInt("cl_quota_stringCmdsPerSecond", 60)
-	SetConVarInt("net_processTimeBudget", 2000)
+	SetConVarInt("net_processTimeBudget", 0)
+	SetConVarInt("script_server_fps", 20)
 
 	//I don't want these things in user screen even if they launch in debug
 	SetConVarBool( "cl_showpos", false )
@@ -186,6 +190,8 @@ void function WeaponSelectorClose()
 
 void function AimTrainer_OnEntitiesDidLoad()
 {
+	ActuallyPutDefaultSettings()
+	
 	//Disables Sun Flare
 	array<entity> fxEnts = GetClientEntArrayBySignifier( "info_particle_system" )
 	foreach ( fxEnt in fxEnts )
@@ -205,31 +211,19 @@ void function ServerCallback_SetDefaultMenuSettings()
 void function ActuallyPutDefaultSettings()
 {
 	entity player = GetLocalClientPlayer()
-	//Hack, reusing convars for this sp gamemode. Default settings for the menu declared here.
-	SetConVarInt( "hud_setting_minimapRotate", 1 )
-	SetConVarInt( "hud_setting_accessibleChat", 1 )
-	SetConVarInt( "hud_setting_streamerMode", 0)
-	SetConVarInt( "hud_setting_showTips",  	1 )
-	SetConVarInt( "hud_setting_compactOverHeadNames", 0 )
-	SetConVarInt( "hud_setting_showMeter", 0)
-	SetConVarInt( "hud_setting_showMedals", 0)
-	SetConVarInt( "hud_setting_showLevelUp", 2)
-	SetConVarInt( "net_minimumPacketLossDC", 4)
-	SetConVarInt( "net_wifi", 100)
-	SetConVarInt( "noise_filter_scale", 5)
-	WaitFrame() //idk?
-	//set default settings
-	player.ClientCommand("CC_AimTrainer_AI_SHIELDS_LEVEL " + GetConVarInt("hud_setting_minimapRotate").tostring())
-	player.ClientCommand("CC_AimTrainer_STRAFING_SPEED " + GetConVarInt("hud_setting_accessibleChat").tostring())
-	player.ClientCommand("CC_RGB_HUD " + GetConVarInt("hud_setting_showMeter").tostring())
-	player.ClientCommand("CC_AimTrainer_INFINITE_CHALLENGE " + GetConVarInt("hud_setting_showMedals").tostring())
-	player.ClientCommand("CC_AimTrainer_INFINITE_AMMO " + GetConVarInt("hud_setting_showTips").tostring())
-	player.ClientCommand("CC_AimTrainer_INFINITE_AMMO2 " + GetConVarInt("hud_setting_compactOverHeadNames").tostring())	
-	player.ClientCommand("CC_AimTrainer_INMORTAL_TARGETS " + GetConVarInt("hud_setting_streamerMode").tostring())
-	player.ClientCommand("CC_AimTrainer_USER_WANNA_BE_A_DUMMY " + GetConVarInt("hud_setting_showLevelUp").tostring())
-	player.ClientCommand("CC_AimTrainer_SPAWN_DISTANCE " + GetConVarInt("net_minimumPacketLossDC").tostring())		
-	player.ClientCommand("CC_AimTrainer_AI_HEALTH " + GetConVarInt("net_wifi").tostring())
-	player.ClientCommand("CC_AimTrainer_DUMMIES_COLOR " + GetConVarInt("noise_filter_scale").tostring())
+	EndSignal( player, "OnDestroy" )
+
+	player.ClientCommand("CC_AimTrainer_AI_SHIELDS_LEVEL " + GetConVarInt("fs_aimtrainer_dummies_shield").tostring())
+	player.ClientCommand("CC_AimTrainer_STRAFING_SPEED " + GetConVarInt("fs_aimtrainer_dummies_speed_selector").tostring())
+	player.ClientCommand("CC_RGB_HUD " + GetConVarInt("fs_aimtrainer_rgb_hud").tostring())
+	player.ClientCommand("CC_AimTrainer_INFINITE_CHALLENGE " + GetConVarInt("fs_aimtrainer_infinite_training").tostring())
+	player.ClientCommand("CC_AimTrainer_INFINITE_AMMO " + GetConVarInt("fs_aimtrainer_infinite_ammo").tostring())
+	player.ClientCommand("CC_AimTrainer_INFINITE_AMMO2 " + GetConVarInt("fs_aimtrainer_autoreload_on_kill").tostring())	
+	player.ClientCommand("CC_AimTrainer_INMORTAL_TARGETS " + GetConVarInt("fs_aimtrainer_dummies_are_inmortal").tostring())
+	player.ClientCommand("CC_AimTrainer_USER_WANNA_BE_A_DUMMY " + GetConVarInt("fs_aimtrainer_use_dummy_model").tostring())
+	player.ClientCommand("CC_AimTrainer_SPAWN_DISTANCE " + GetConVarInt("fs_aimtrainer_dummies_spawn_distance").tostring())		
+	player.ClientCommand("CC_AimTrainer_AI_HEALTH " + GetConVarInt("fs_aimtrainer_dummies_health").tostring())
+	player.ClientCommand("CC_AimTrainer_DUMMIES_COLOR " + GetConVarInt("fs_aimtrainer_dummies_color").tostring())
 }
 
 
@@ -284,6 +278,9 @@ string function ReturnChallengeName(int index)
 			break
 		case 17:
 			final = "ARMOR SWAP"
+			break
+		case 18:
+			final = "DROPSHIP DRILL"
 			break
 		case 0:
 		default: 
@@ -341,7 +338,7 @@ void function ServerCallback_LiveStatsUIAccuracyViaTotalShots(int pellets)
 	ChallengesClientStruct.totalShots += (1*pellets)
 	float accuracy = float(ChallengesClientStruct.ShotsHits)/float(ChallengesClientStruct.totalShots)
 	
-	string final = ChallengesClientStruct.ShotsHits.tostring() + "/" +  ChallengesClientStruct.totalShots.tostring() + " | " + ClientLocalizeAndShortenNumber_Float(accuracy, 1, 2)
+	string final = ChallengesClientStruct.ShotsHits.tostring() + "/" +  ChallengesClientStruct.totalShots.tostring() + " | " + ClientLocalizeAndShortenNumber_Float(accuracy * 100, 3, 2) + "%"
 	Hud_SetText( HudElement( "ChallengesAccuracyValue"), final.tostring())
 }
 void function ServerCallback_LiveStatsUIAccuracyViaShotsHits()
@@ -349,7 +346,7 @@ void function ServerCallback_LiveStatsUIAccuracyViaShotsHits()
 	ChallengesClientStruct.ShotsHits++
 	float accuracy = float(ChallengesClientStruct.ShotsHits)/float(ChallengesClientStruct.totalShots)
 	
-	string final = ChallengesClientStruct.ShotsHits.tostring() + "/" +  ChallengesClientStruct.totalShots.tostring() + " | " + ClientLocalizeAndShortenNumber_Float(accuracy, 1, 2)
+	string final = ChallengesClientStruct.ShotsHits.tostring() + "/" +  ChallengesClientStruct.totalShots.tostring() + " | " + ClientLocalizeAndShortenNumber_Float(accuracy * 100, 3, 2) + "%"
 	Hud_SetText( HudElement( "ChallengesAccuracyValue"), final.tostring())
 }
 
@@ -358,7 +355,7 @@ void function ServerCallback_LiveStatsUIDamageViaWeaponAttack(int damage, float 
 	ChallengesClientStruct.damagePossible += int(damagePossible)
 	float damageRatio = float(ChallengesClientStruct.damageDone)/float(ChallengesClientStruct.damagePossible)
 	
-	string final = ChallengesClientStruct.damageDone.tostring() + "/" +  ChallengesClientStruct.damagePossible.tostring() + " | " + ClientLocalizeAndShortenNumber_Float(damageRatio, 1, 2)
+	string final = ChallengesClientStruct.damageDone.tostring() + "/" +  ChallengesClientStruct.damagePossible.tostring() + " | " + ClientLocalizeAndShortenNumber_Float(damageRatio * 100, 3, 2) + "%"
 	Hud_SetText( HudElement( "ChallengesDamageValue"), final.tostring())
 }
 
@@ -367,7 +364,7 @@ void function ServerCallback_LiveStatsUIDamageViaDummieDamaged(int damage)
 	ChallengesClientStruct.damageDone += damage
 	float damageRatio = float(ChallengesClientStruct.damageDone)/float(ChallengesClientStruct.damagePossible)
 	
-	string final = ChallengesClientStruct.damageDone.tostring() + "/" +  ChallengesClientStruct.damagePossible.tostring() + " | " + ClientLocalizeAndShortenNumber_Float(damageRatio, 1, 2)
+	string final = ChallengesClientStruct.damageDone.tostring() + "/" +  ChallengesClientStruct.damagePossible.tostring() + " | " + ClientLocalizeAndShortenNumber_Float(damageRatio * 100, 3, 2) + "%"
 	Hud_SetText( HudElement( "ChallengesDamageValue"), final.tostring())
 }
 
@@ -399,32 +396,56 @@ void function CoolCameraOnMenu()
 	
     if(!IsValid(player)) return
 	
-	if (GetMapName() == "mp_rr_desertlands_64k_x_64k" || GetMapName() == "mp_rr_desertlands_64k_x_64k_nx" || GetMapName() == "mp_rr_desertlands_64k_x_64k_tt")
+	switch( MapName() )
 	{
+		case eMaps.mp_rr_desertlands_64k_x_64k:
+		case eMaps.mp_rr_desertlands_64k_x_64k_nx:
+		case eMaps.mp_rr_desertlands_64k_x_64k_tt:
 		cutsceneSpawns.append(NewCameraPair(<10881.2295, 5903.09863, -3176.7959>, <0, -143.321213, 0>)) 
 		cutsceneSpawns.append(NewCameraPair(<9586.79199, 24404.5898, -2019.6366>, <0, -52.6216431, 0>)) 
 		cutsceneSpawns.append(NewCameraPair(<630.249573, 13375.9219, -2736.71948>, <0, -43.2706299, 0>))
 		cutsceneSpawns.append(NewCameraPair(<16346.3076, -34468.9492, -1109.32153>, <0, -44.3879509, 0>))
 		cutsceneSpawns.append(NewCameraPair(<1133.25562, -20102.9648, -2488.08252>, <0, -24.9140873, 0>))
-	}
-	else if(GetMapName() == "mp_rr_canyonlands_staging")
-	{
+		break
+		
+		case eMaps.mp_flowstate:
+		case eMaps.mp_rr_canyonlands_staging:
 		cutsceneSpawns.append(NewCameraPair(<32645.04,-9575.77,-25911.94>, <7.71,91.67,0.00>)) 
 		cutsceneSpawns.append(NewCameraPair(<49180.1055, -6836.14502, -23461.8379>, <0, -55.7723808, 0>)) 
 		cutsceneSpawns.append(NewCameraPair(<43552.3203, -1023.86182, -25270.9766>, <0, 20.9528542, 0>))
 		cutsceneSpawns.append(NewCameraPair(<30038.0254, -1036.81982, -23369.6035>, <55, -24.2035522, 0>))
-	}
-	else if(GetMapName() == "mp_rr_canyonlands_mu1" || GetMapName() == "mp_rr_canyonlands_mu1_night" || GetMapName() == "mp_rr_canyonlands_64k_x_64k")
-	{
+		break
+
+		case eMaps.mp_rr_canyonlands_mu1:
+		case eMaps.mp_rr_canyonlands_mu1_night:
+		case eMaps.mp_rr_canyonlands_64k_x_64k:
 		cutsceneSpawns.append(NewCameraPair(<-7984.68408, -16770.2031, 3972.28271>, <0, -158.605301, 0>)) 
 		cutsceneSpawns.append(NewCameraPair(<-19691.1621, 5229.45264, 4238.53125>, <0, -54.6054993, 0>))
 		cutsceneSpawns.append(NewCameraPair(<13270.0576, -20413.9023, 2999.29468>, <0, 98.6180649, 0>))
 		cutsceneSpawns.append(NewCameraPair(<-25250.0391, -723.554199, 3427.51831>, <0, -55.5126762, 0>))
-	}
-	else if(GetMapName() == "mp_rr_aqueduct_night" || GetMapName() == "mp_rr_aqueduct")
-	{
+		break
+
+		case eMaps.mp_rr_olympus_mu1:
+		cutsceneSpawns.append(NewCameraPair(<-34747.9766, 16697.9922, -3418.06567>, <0, -25, 0>))
+		cutsceneSpawns.append(NewCameraPair(<-22534.2168, 3191.64282, -4614.2583>, <0, -96.9278641, 0>))
+		cutsceneSpawns.append(NewCameraPair(<-43278.6406, -13421.3818, -2568.48071>, <0, 60.0252533, 0>))
+		cutsceneSpawns.append(NewCameraPair(<-227.150497, -15917.8672, -3549.59814>, <0, -8.99629879, 0>))
+		cutsceneSpawns.append(NewCameraPair(<23119.459, -19445.4551, -3955.37915>, <0, 59.2959213, 0>))
+		cutsceneSpawns.append(NewCameraPair(<11381.1982, -3206.40552, -3129.646>, <0, 19.5211906, 0>))
+		cutsceneSpawns.append(NewCameraPair(<-11880.9453, 13690.4688, -3865.60645>, <0, -78.4126205, 0>))
+		cutsceneSpawns.append(NewCameraPair(<7088.45898, 25559.4492, -40.745079>, <0, -40.4022217, 0>))
+		cutsceneSpawns.append(NewCameraPair(<-19851.1211, 16372.2002, -5309.15869>, <0, -169.298721, 0>))
+		break
+
+		case eMaps.mp_rr_aqueduct_night:
 		cutsceneSpawns.append(NewCameraPair(<0, 0, 0>, <0, 0, 0>))
+
+		default:
+		// cutsceneSpawns.append(NewCameraPair(<-3096.13501, 632.377991, 1913.47217>, <0, -134.430405, 0> ))
+		
+		break
 	}
+
 
     //EmitSoundOnEntity( player, "music_skyway_04_smartpistolrun" )
 
@@ -796,7 +817,10 @@ void function ServerCallback_RestartChallenge(int challenge)
 			break
 		case 17:
 			StartChallenge8NewCClient()
-			break		
+			break	
+		case 18:
+			StartChallenge9NewCClient()
+			break	
 	}
 }
 
@@ -945,6 +969,14 @@ void function StartChallenge8NewCClient()
 	ToggleArmorSwapUI(true)
 }
 
+void function StartChallenge9NewCClient()
+{
+	entity player = GetLocalClientPlayer()
+	ScreenFade( player, 0, 0, 0, 255, 1, 1, FFADE_IN | FFADE_PURGE )
+	thread CreateDescriptionRUI("Practice dropship scenario")
+	thread CreateTimerRUIandSTATS()
+	player.ClientCommand("CC_StartChallenge9NewC")
+}
 void function SkipButtonResultsClient()
 {
 	entity player = GetLocalClientPlayer()
@@ -989,19 +1021,19 @@ void function ChangeAimTrainer_STRAFING_SPEEDClient(string desiredSpeed)
 	
 	switch(int(desiredSpeed)){
 	case 0:
-		speed = 0
-		break
-	case 1:
 		speed = 1
 		break
+	case 1:
+		speed = 2
+		break
 	case 2:
-		speed = 1.25
+		speed = 3
 		break
 	case 3:
-		speed = 1.625
+		speed = 4
 		break
 	case 4:
-		speed = 1.75
+		speed = 5
 		break
 	}
 	
@@ -1095,7 +1127,7 @@ void function ChangeAimTrainer_USER_WANNA_BE_A_DUMMYClient(string isabool)
 void function UIToClient_MenuGiveWeapon(string weapon)
 {
 	entity player = GetLocalClientPlayer()
-    player.ClientCommand("CC_MenuGiveAimTrainerWeapon " + weapon + " " + DesiredSlot)
+	player.ClientCommand("CC_MenuGiveAimTrainerWeapon " + weapon + " " + DesiredSlot)
 }
 
 void function UIToClient_MenuGiveWeaponWithAttachments(string weapon, int desiredoptic, int desiredbarrel, int desiredstock, int desiredshotgunbolt, string weapontype, int desiredMag, string ammotype)
@@ -1103,8 +1135,7 @@ void function UIToClient_MenuGiveWeaponWithAttachments(string weapon, int desire
 	entity player = GetLocalClientPlayer()
 
 	// printt("DEBUG: desiredOptic: " + desiredoptic, " desiredBarrel: " + desiredbarrel, " desiredStock: " + desiredstock)
-
-    player.ClientCommand("CC_MenuGiveAimTrainerWeapon " + weapon + " " + DesiredSlot + " " + desiredoptic + " " + desiredbarrel + " " + desiredstock + " " + desiredshotgunbolt + " " + weapontype + " " + desiredMag + " " + ammotype )
+	player.ClientCommand("CC_MenuGiveAimTrainerWeapon " + weapon + " " + DesiredSlot + " " + desiredoptic + " " + desiredbarrel + " " + desiredstock + " " + desiredshotgunbolt + " " + weapontype + " " + desiredMag + " " + ammotype )
 }
 
 void function OpenFRChallengesSettingsWpnSelector()
