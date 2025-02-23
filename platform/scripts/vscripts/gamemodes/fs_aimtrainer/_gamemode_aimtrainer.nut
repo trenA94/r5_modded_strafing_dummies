@@ -1,6 +1,6 @@
 /*
 Flowstate Aim Trainer v1.0 - Made by CafeFPS (server, client, ui)
-Discord: Retículo Endoplasmático#5955 | Twitter: @CafeFPS
+Discord: @CafeFPS | Twitter: @CafeFPS
 Support me: https://ko-fi.com/r5r_colombia
 
 More credits:
@@ -37,15 +37,33 @@ vector onGroundDummyPos
 vector AimTrainer_startPos
 vector AimTrainer_startAngs
 
-float lastDmgd
-float slowCd
-float slowed
+int lastDmg
 
 struct{
 	array<entity> floor
 	array<entity> dummies
 	array<entity> props
 } ChallengesEntities
+
+struct
+{
+	float helmet_lv4 = 0.65
+	
+} settings
+
+table<string, string> rightActions = {
+	curDir = "ACT_RUN_RIGHT",
+	tmpDir = "ACT_STRAFE_TO_STAND_RIGHT",
+	oppDir = "ACT_RUN_LEFT",
+	oppTmpDir = "ACT_STRAFE_TO_STAND_LEFT"
+}
+
+table<string, string> leftActions = {
+	curDir = "ACT_RUN_LEFT",
+	tmpDir = "ACT_STRAFE_TO_STAND_LEFT",
+	oppDir = "ACT_RUN_RIGHT",
+	oppTmpDir = "ACT_STRAFE_TO_STAND_RIGHT"
+}
 
 table<int, array<ChallengeScore> > ChallengesData //implement this
 table<int, int> ChallengesBestScores
@@ -54,7 +72,8 @@ void function _ChallengesByColombia_Init()
 {
 	//Increase client command limit to 60
 	SetConVarInt("sv_quota_stringCmdsPerSecond", 60)
-	
+	SetConVarInt("net_processTimeBudget", 0 )
+
 	//Todo: create only one cc for this
 	//first challenges select menu column
 	AddClientCommandCallback("CC_StartChallenge1", CC_StartChallenge1)
@@ -108,6 +127,8 @@ void function _ChallengesByColombia_Init()
 	AddDamageCallbackSourceID( eDamageSourceId.damagedef_ticky_arc_blast, Arcstar_OnStick )
 	AddDamageCallbackSourceID( eDamageSourceId.mp_weapon_grenade_emp, Arcstar_OnStick )
 	
+	SurvivalFreefall_Init() //Enables freefall/skydive
+	
 	//required assets for different challenges
 	PrecacheParticleSystem($"P_enemy_jump_jet_ON_trails")
 	PrecacheParticleSystem( $"P_skydive_trail_CP" )
@@ -120,39 +141,57 @@ void function _ChallengesByColombia_Init()
 	//death callback for player because some challenges can kill player
 	AddDeathCallback( "player", OnPlayerDeathCallback )
 	
-	//add basic aim trainer locations for maps //todo: move this to a datatable
-	if (GetMapName() == "mp_rr_desertlands_64k_x_64k" || GetMapName() == "mp_rr_desertlands_64k_x_64k_nx" || GetMapName() == "mp_rr_desertlands_64k_x_64k_tt" )
+	switch( MapName() )
 	{
+		case eMaps.mp_rr_desertlands_64k_x_64k:
+		case eMaps.mp_rr_desertlands_64k_x_64k_nx:
+		case eMaps.mp_rr_desertlands_64k_x_64k_tt:
 		floorLocation = <-10020.1543, -8643.02832, 5189.92578>
 		onGroundLocationPos = <12891.2783, -2391.77124, -3121.60132>
 		onGroundLocationAngs = <0, -157.629303, 0>
 		AimTrainer_startPos = <10623.7773, 4953.48975, -4303.92041>
-		AimTrainer_startAngs = <0, 143.031052, 0>			
-	}
-	else if(GetMapName() == "mp_rr_canyonlands_staging")
-	{
+		AimTrainer_startAngs = <0, 143.031052, 0>	
+		break
+
+		case eMaps.mp_rr_canyonlands_staging:
 		floorLocation = <35306.2344, -16956.5098, -27010.2539>
 		onGroundLocationPos = <33946,-6511,-28859>
 		onGroundLocationAngs = <0,-90,0>
 		AimTrainer_startPos = <32645.04,-9575.77,-25911.94>
-		AimTrainer_startAngs = <7.71,91.67,0.00>		
-	}
-	else if(GetMapName() == "mp_rr_canyonlands_mu1" || GetMapName() == "mp_rr_canyonlands_mu1_night" || GetMapName() == "mp_rr_canyonlands_64k_x_64k")
-	{
+		AimTrainer_startAngs = <7.71,91.67,0.00>	
+		break
+
+		case eMaps.mp_rr_canyonlands_mu1:
+		case eMaps.mp_rr_canyonlands_mu1_night:
+		case eMaps.mp_rr_canyonlands_64k_x_64k:
 		floorLocation = <-11964.7803, -8858.25098, 17252.25>
 		onGroundLocationPos = <-14599.2178, -7073.89551, 2703.93286>
 		onGroundLocationAngs = <0,90,0>
 		AimTrainer_startPos = <-16613.873, -487.12088, 3312.10791>
 		AimTrainer_startAngs = <0, 144.184357, 0>
-	}
-	else if(GetMapName() == "mp_rr_aqueduct_night" || GetMapName() == "mp_rr_aqueduct")
-	{
+		break
+
+		case eMaps.mp_rr_olympus_mu1:
+		floorLocation = <9857.08496, -7948.96631, -1000>
+		onGroundLocationPos = <-13700.8594, 26238.1387, -6891.95508>
+		onGroundLocationAngs = <0, 175.306152, 0>
+		AimTrainer_startPos = <-34234.2148, 9426.86426, -5563.96875>
+		AimTrainer_startAngs = <0, 69.2027512, 0>
+
+		case eMaps.mp_rr_aqueduct_night:
 		floorLocation = <-11964.7803, -8858.25098, 17252.25>
 		onGroundLocationPos = <-6317.76, -2204.78, 374.85>
 		onGroundLocationAngs = <0,60,0>
 		AimTrainer_startPos = <-6317.76, -2204.78, 374.85>
 		AimTrainer_startAngs = <0,60,0>
+
+		break
+		default:
+		// cutsceneSpawns.append(NewCameraPair(<-3096.13501, 632.377991, 1913.47217>, <0, -134.430405, 0> ))
+		
+		break
 	}
+
 	floorCenterForPlayer = <floorLocation.x+3840, floorLocation.y+3840, floorLocation.z+200>
 	floorCenterForButton = <floorLocation.x+3840+200, floorLocation.y+3840, floorLocation.z+18>
 	
@@ -161,15 +200,12 @@ void function _ChallengesByColombia_Init()
 		ChallengesData[i] <- []
 		ChallengesBestScores[i] <- 0
 	}	
+	
+	settings.helmet_lv4 = GetCurrentPlaylistVarFloat( "helmet_lv4", 0.65 )
 }
 
 void function StartFRChallenges(entity player)
 {
-	while( !IsValid( player ) )
-		WaitFrame()
-
-	Remote_CallFunction_NonReplay(player, "ServerCallback_SetDefaultMenuSettings")
-
 	Remote_CallFunction_NonReplay(player, "ServerCallback_CoolCameraOnMenu")
 	Remote_CallFunction_NonReplay(player, "ServerCallback_OpenFRChallengesMainMenu", 0)
 
@@ -177,6 +213,8 @@ void function StartFRChallenges(entity player)
 	player.SetAngles(AimTrainer_startAngs)
 
 	player.p.isChallengeActivated = false
+	SetServerVar( "minimapState", eMinimapState.Hidden)
+	printt( "Aimtrainer Start" )
 }
 
 void function ResetChallengeStats(entity player)
@@ -207,10 +245,10 @@ void function SetCommonDummyLines(entity dummy)
 	dummy.SetDeathNotifications( true )
 	dummy.SetValidHealthBarTarget( true )
 	SetObjectCanBeMeleed( dummy, true )
-	if(AimTrainer_AI_COLOR == 5)
-		dummy.SetSkin(RandomIntRangeInclusive(1,4))
-	else
-		dummy.SetSkin(AimTrainer_AI_COLOR)
+	// if(AimTrainer_AI_COLOR == 5)
+		// dummy.SetSkin(RandomIntRangeInclusive(1,4))
+	// else
+		// dummy.SetSkin(AimTrainer_AI_COLOR)
 	dummy.DisableHibernation()
 }
 
@@ -228,7 +266,7 @@ void function StartStraferDummyChallenge(entity player)
 	if(!IsValid(player)) return
 	player.SetOrigin(onGroundLocationPos)
 	player.SetAngles(onGroundLocationAngs)
-
+	
 	EndSignal(player, "ChallengeTimeOver")
 	OnThreadEnd(
 		function() : ( player)
@@ -245,17 +283,13 @@ void function StartStraferDummyChallenge(entity player)
 	thread ChallengeWatcherThread(endtime, player)
 
 	while(true){
-		//lastDmgd = 0
-		//slowCd = 0
-		//slowed = 0
-
 		if(!AimTrainer_INFINITE_CHALLENGE && Time() > endtime) break
 		vector dummypos = player.GetOrigin() + AnglesToForward(onGroundLocationAngs)*100*AimTrainer_SPAWN_DISTANCE
-		entity dummy = CreateDummy( 99, AimTrainerOriginToGround( dummypos + Vector(0,0,10000)), Vector(0,0,0) )
+		entity dummy = CreateLegend_ai_aimtrainer( 99, AimTrainerOriginToGround( dummypos + Vector(0,0,10000)), Vector(0,0,0), true )
 		vector pos = dummy.GetOrigin()
 		vector angles = dummy.GetAngles()
 		StartParticleEffectInWorld( GetParticleSystemIndex( FIRINGRANGE_ITEM_RESPAWN_PARTICLE ), pos, angles )
-		SetSpawnOption_AISettings( dummy, "npc_dummie_combat_trainer" )
+		// SetSpawnOption_AISettings( dummy, "npc_dummie_combat_trainer" )
 		DispatchSpawn( dummy )
 		dummy.SetOrigin(dummy.GetOrigin() + Vector(0,0,1))
 		
@@ -276,38 +310,45 @@ void function StartStraferDummyChallenge(entity player)
 
 void function StrafeMovement(entity ai, entity player)
 {
-	string curDir
-	string lastDir
-	int count
-	int count2
-	int count3
-	int count4
+	table<string, string> lastDir = {}
+	table<string, string> curDir = {}
+	int randDir
+	int max
+	int min
+	int dodged
+	int globalBias
 	int bias
-	int ads
-	int adsRepeat
-	float spd
-	float randTime
-	float switchSlow
+	int travelled
+	int length
+	int maxLength
+	int stutter
+	int escape
+	float spd = 1.25
 
-	float aimTrainerSpd = AimTrainer_STRAFING_SPEED
-	float adsSlow = 0.75
-	if(aimTrainerSpd == 1)
+	if(AimTrainer_STRAFING_SPEED == 0)
 	{
-		aimTrainerSpd = 1.25
-		adsSlow = 0.5
+		min = 2
+		max = 4
 	}
-
-	if(AimTrainer_SPAWN_DISTANCE > 3 && AimTrainer_SPAWN_DISTANCE <= 7)
+	else if(AimTrainer_STRAFING_SPEED == 1)
 	{
-		ads = 10
+		min = 3
+		max = 6
 	}
-	else if(AimTrainer_SPAWN_DISTANCE > 7)
+	else if(AimTrainer_STRAFING_SPEED == 2)
 	{
-		ads = 6
+		min = 4
+		max = 8
+	}
+	else if(AimTrainer_STRAFING_SPEED == 3)
+	{
+		min = 5
+		max = 10
 	}
 	else
 	{
-		ads = 0
+		min = 2
+		max = 10
 	}
 
 	ai.EndSignal("OnDeath")
@@ -321,133 +362,78 @@ void function StrafeMovement(entity ai, entity player)
 		}
 	)
 
+	lastDmg = 1
+	ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
 	while(IsValid(ai))
 	{
-		int randDir = RandomIntRangeInclusive(1,10)
-		int randStrafe = RandomIntRangeInclusive(1,10)
-		int randAds
-		if(ads)
-		{
-			 randAds = RandomIntRangeInclusive(1,ads)
-		}
-
-		ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
-		if(AimTrainer_STRAFING_SPEED == 0)
-		{
-			WaitFrame()
-			continue
-		}
-			
-		if(count == 15)
-		{
-			bias = RandomIntRangeInclusive(1,3)
-			if(CoinFlip())
-			{
-				bias *= -1
-			}
-			count = 0
-		}
-
-		if(randDir+bias >= 6)
-		{
-			curDir = "ACT_RUN_RIGHT"
-		}
-		else
-		{
-			curDir = "ACT_RUN_LEFT"
-		}
+		bias = RandomIntRangeInclusive(0,5)
+		if(CoinFlip()) bias *= -1
+		randDir = RandomIntRangeInclusive(1,10)
+		if(randDir+bias > 5) curDir = rightActions
+		else curDir = leftActions
+		travelled = 0
+		length = 0
+		escape = 0
 		
-		if(adsRepeat)
+		if(!("curDir" in lastDir)) 
 		{
-			adsRepeat = 0
-		}
-		else if(ads && randAds > (ads-4))
-		{
-			if(count2)
-			{
-				spd = aimTrainerSpd
-				count2 = 0
-			}
-			else
-			{
-				spd = aimTrainerSpd*adsSlow
-				count2++
-			}
-		}
-		else
-		{
-			spd = aimTrainerSpd
-		}
-		
-		if(randStrafe > 6)
-		{
-			if(count3 == 2)
-			{
-				randTime = RandomFloatRange(0.1,0.2)
-				count3 = 0
-			}
-			else
-			{
-				randTime = RandomFloatRange(0.01,0.1)
-				adsRepeat = 1
-				count3++
-			}
-		}
-		else if(randStrafe > 2)
-		{
-			randTime = RandomFloatRange(0.1,0.2)
-		}
-		else
-		{
-			if(count4 == 2)
-			{
-				randTime = RandomFloatRange(0.1,0.2)
-				count4 = 0
-			}
-			else
-			{
-				randTime = RandomFloatRange(0.2,0.3)
-				count4++
-			}
-		}
-		float now = Time()
-		float endTime = now + randTime
-		float randTime2 = RandomFloatRange(0,randTime+0.01)
-		float endTime2 = now + randTime2
-		if(curDir != lastDir)
-		{
-			ai.Anim_ScriptedPlayActivityByName(curDir, true, 0.1)
-			ai.Anim_SetPlaybackRate(0)
-			switchSlow = Time() + 0.25
+			ai.Anim_ScriptedPlayActivityByName(curDir.curDir, false, spd)
 			lastDir = curDir
-			
 		}
-
-		float slowdown = 1
-		float slowdown2 = 1
-		WaitFrame()
-		while(now < endTime)
+		globalBias = RandomIntRangeInclusive(10, 30)
+		maxLength = RandomIntRangeInclusive(min, max)
+		while(travelled <= globalBias)
 		{
-			if(now >= endTime2)
+			if(CoinFlip()) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
+			if(!lastDmg && (dodged < maxLength))
 			{
-				ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
+				WaitFrame()
+				dodged++
+				continue
 			}
-			if(now <= switchSlow)
+			else if(escape >= 10)
 			{
-				slowdown = 1 - (1 * ((switchSlow - now)/switchSlow))
+				dodged = 0
+				lastDmg = 0
+				escape = 0
+				if(CoinFlip())
+				{
+					if(CoinFlip()) curDir = rightActions
+					else curDir = leftActions
+				}
+				if(CoinFlip()) 
+				{
+					if(CoinFlip()) maxLength = RandomIntRangeInclusive(5, 10)
+					else maxLength = RandomIntRangeInclusive(2, 4)
+				}
 			}
-			if(now <= slowed)
-			{
-				slowdown2 = 1 - (0.4 * ((slowed - now)/slowed))
-			}
-			ai.Anim_SetPlaybackRate(spd * slowdown * slowdown2)
-			WaitFrame()
-			now = Time()
-		}
 
-		if(randTime > 0.1)
-		{
-			count++
+			if(curDir != lastDir)
+			{
+				ai.Anim_ScriptedPlayActivityByName(curDir.oppTmpDir, false, 2)
+				WaitFrame()
+				ai.Anim_ScriptedPlayActivityByName(curDir.curDir, false, spd)
+				lastDir = curDir
+			}
+			else if(length == maxLength)
+			{
+				stutter = RandomIntRangeInclusive(2, maxLength)
+				ai.Anim_ScriptedPlayActivityByName(curDir.tmpDir, false, 2)
+				WaitFrame()
+				ai.Anim_ScriptedPlayActivityByName(curDir.oppDir, false, spd)
+				wait 0.05*stutter
+				if(CoinFlip()) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
+				ai.Anim_ScriptedPlayActivityByName(curDir.oppTmpDir, false, 2)
+				WaitFrame()
+				ai.Anim_ScriptedPlayActivityByName(curDir.curDir, false, spd)
+				length = -1
+				travelled -= stutter
+				maxLength = RandomIntRangeInclusive(min, max)
+			}
+			else WaitFrame()
+			length++
+			travelled++
+			escape++
 		}
 	}
 }
@@ -506,13 +492,14 @@ void function StartSwapFocusDummyChallenge(entity player)
 		if(!AimTrainer_INFINITE_CHALLENGE && Time() > endtime) break		
 		if(ChallengesEntities.dummies.len()<5){
 
-			vector circleoriginfordummy = circleLocations.getrandom()
-			entity dummy = CreateDummy( 99, AimTrainerOriginToGround(circleoriginfordummy + <0, 0, 10000> ) , onGroundLocationAngs*-1 )
+			vector circleoriginfordummy = FS_GetGoodPosForTSDummy( circleLocations )
+			entity dummy = CreateDummy( 99, circleoriginfordummy, onGroundLocationAngs*-1 )
 			vector pos = dummy.GetOrigin()
 			vector angles = dummy.GetAngles()
 			StartParticleEffectInWorld( GetParticleSystemIndex( FIRINGRANGE_ITEM_RESPAWN_PARTICLE ), pos, angles )
 			SetSpawnOption_AISettings( dummy, "npc_dummie_combat_trainer" )
-			DispatchSpawn( dummy )	
+			DispatchSpawn( dummy )
+			PutEntityInSafeSpot( dummy, null, null, dummy.GetOrigin() + AnglesToForward ( dummy.GetAngles() ) * 30, dummy.GetOrigin() )
 			dummy.SetOrigin(dummy.GetOrigin() + Vector(0,0,5))
 			
 			//PutEntityInSafeSpot( dummy, null, null, dummy.GetOrigin() + dummy.GetUpVector()*2048 + dummy.GetForwardVector()*2048 , dummy.GetOrigin() )
@@ -523,7 +510,7 @@ void function StartSwapFocusDummyChallenge(entity player)
 			dummy.SetHealth( AimTrainer_AI_HEALTH )
 			SetCommonDummyLines(dummy)
 			ChallengesEntities.dummies.append(dummy)
-			
+
 			AddEntityCallback_OnDamaged(dummy, OnStraferDummyDamaged)
 			AddEntityCallback_OnKilled(dummy, OnDummyKilled)
 
@@ -531,6 +518,36 @@ void function StartSwapFocusDummyChallenge(entity player)
 		}
 		WaitFrame()
 	}
+}
+
+vector function FS_GetGoodPosForTSDummy( array<vector> circleLocations )
+{
+	foreach( pos in circleLocations )
+	{
+		if( !FS_PosCanContainDummy( pos ) )
+		{
+			// printt( pos, " didn't work" )
+			continue
+		}
+		
+		return pos
+	}
+	
+	return circleLocations.getrandom()
+}
+
+bool function FS_PosCanContainDummy( vector origin )
+{
+	vector endpos = <origin.x, origin.y, -MAX_WORLD_COORD_BUFFER >
+
+	TraceResults result = TraceHull( origin, endpos, <-16, -16, 0>, <16, 16, 150>, [], TRACE_MASK_PLAYERSOLID, TRACE_COLLISION_GROUP_PLAYER ) // dummy ocupa 72 pero probemos 150
+	if ( result.startSolid || result.fraction >= 1 )
+	{
+		
+		return true
+	}
+	
+	return false
 }
 
 void function TargetSwitcthingWatcher(entity ai, entity player)
@@ -545,10 +562,17 @@ void function TargetSwitcthingWatcher(entity ai, entity player)
 			ChallengesEntities.dummies.removebyvalue(ai)
 		}
 	)
-	
+	WaitFrame()
 	while(IsValid(ai))
     {
-		ai.SetAngles(VectorToAngles( player.GetOrigin() - ai.GetOrigin()))
+		ai.SetAngles(<0,VectorToAngles( player.GetOrigin() - ai.GetOrigin()).y,0>)
+		
+		if( Distance( ai.GetOrigin(), player.GetOrigin() ) > 3000 )
+		{
+			ai.Destroy()
+			break
+		}
+
 		if(AimTrainer_STRAFING_SPEED == 0)
 		{
 			WaitFrame()
@@ -2051,6 +2075,9 @@ void function StartSkyDiveChallenge(entity player)
 			dummy.SetHealth( AimTrainer_AI_HEALTH )
 			SetCommonDummyLines(dummy)
 			dummy.DisableNPCFlag( NPC_ALLOW_PATROL | NPC_ALLOW_INVESTIGATE | NPC_NEW_ENEMY_FROM_SOUND )
+			dummy.EnableNPCFlag( NPC_IGNORE_ALL )
+			dummy.SetNoTarget( true )
+			dummy.EnableNPCFlag( NPC_DISABLE_SENSING )
 			ChallengesEntities.dummies.append(dummy)
 			array<string> attachments = [ "vent_left", "vent_right" ]
 			
@@ -2199,6 +2226,12 @@ void function StartRunningTargetsChallenge(entity player)
 	player.UnfreezeControlsOnServer()
 	
 	array<vector> circleLocations = NavMesh_RandomPositions( player.GetOrigin(), HULL_HUMAN, 40, 200*AimTrainer_SPAWN_DISTANCE, 300*AimTrainer_SPAWN_DISTANCE  )
+	
+	if( circleLocations.len() == 0 )
+	{
+		Message( player, "no navmesh restart game" )
+		return
+	}
 
 	float endtime = Time() + AimTrainer_CHALLENGE_DURATION
 	thread ChallengeWatcherThread(endtime, player)
@@ -2260,6 +2293,8 @@ void function DummyRunningTargetsMovement(entity ai, entity player)
 		}
 	)
 	
+	WaitFrame()
+
 	ai.Anim_ScriptedPlayActivityByName( "ACT_SPRINT_FORWARD", true, 0.1 )
 	ai.Anim_SetPlaybackRate(AimTrainer_STRAFING_SPEED)
 	wait 0.5
@@ -2282,7 +2317,8 @@ void function DummyRunningTargetsMovement(entity ai, entity player)
 		}
 		else if(distance >= 3000)
 		{ 
-			if(IsValid(ai)) ai.Destroy()
+			ai.Destroy()
+			break
 		}
 		WaitFrame()
 	}
@@ -2293,7 +2329,7 @@ void function StartArmorSwapChallenge(entity player)
 {
 	if(!IsValid(player)) return
 	
-	if( GetMapName() == "mp_rr_desertlands_64k_x_64k" || GetMapName() == "mp_rr_desertlands_64k_x_64k_nx" || GetMapName() == "mp_rr_desertlands_64k_x_64k_tt" )
+	if( MapName() == eMaps.mp_rr_desertlands_64k_x_64k || MapName() == eMaps.mp_rr_desertlands_64k_x_64k_nx || MapName() == eMaps.mp_rr_desertlands_64k_x_64k_tt )
 		player.SetOrigin(<10377.2695, 6253.86523, -4303.90625>)
 	else
 		player.SetOrigin(onGroundLocationPos)
@@ -2541,7 +2577,7 @@ void function OnChallengeEnd(entity player)
 }
 
 void function ChallengesStartAgain(entity player)
-{
+{	
 	EndSignal(player, "ForceResultsEnd_SkipButton")
 	
 	OnThreadEnd(
@@ -2637,10 +2673,11 @@ void function OnStraferDummyDamaged( entity dummy, var damageInfo )
 	//fake helmet
 	float headshotMultiplier = GetHeadshotDamageMultiplierFromDamageInfo(damageInfo)
 	float basedamage = DamageInfo_GetDamage(damageInfo)/headshotMultiplier
+	lastDmg++
 	
 	if(IsValidHeadShot( damageInfo, dummy ))
 	{
-		int headshot = int(basedamage*(GetCurrentPlaylistVarFloat( "helmet_lv4", 0.65 )+(1-GetCurrentPlaylistVarFloat( "helmet_lv4", 0.65 ))*headshotMultiplier))
+		int headshot = int(basedamage*(settings.helmet_lv4+(1-settings.helmet_lv4)*headshotMultiplier))
 		DamageInfo_SetDamage( damageInfo, headshot)
 		if(headshot > dummy.GetHealth() + dummy.GetShieldHealth()) 
 		{
@@ -2688,15 +2725,7 @@ void function OnStraferDummyDamaged( entity dummy, var damageInfo )
 		attacker.p.straferCriticalShots++
 		Remote_CallFunction_NonReplay(attacker, "ServerCallback_LiveStatsUIHeadshot", attacker.p.straferCriticalShots)
 	}
-
-	float now = Time()
-	if(now > slowCd)
-	{
-		lastDmgd = now
-		slowCd = now + 3
-		slowed = now + 0.25
-	}
-
+	
 	if(dummy.GetTargetName() == "arcstarChallengeDummy" ) OnDummyKilled(dummy, damageInfo)
 }
 
@@ -2705,7 +2734,7 @@ void function OnFloatingDummyDamaged( entity dummy, var damageInfo )
 	//fake helmet
 	float headshotMultiplier = GetHeadshotDamageMultiplierFromDamageInfo(damageInfo)
 	float basedamage = DamageInfo_GetDamage(damageInfo)/headshotMultiplier
-	if(IsValidHeadShot( damageInfo, dummy )) DamageInfo_SetDamage( damageInfo, basedamage*(GetCurrentPlaylistVarFloat( "helmet_lv4", 0.65 )+(1-GetCurrentPlaylistVarFloat( "helmet_lv4", 0.65 ))*headshotMultiplier))
+	if(IsValidHeadShot( damageInfo, dummy )) DamageInfo_SetDamage( damageInfo, basedamage*(settings.helmet_lv4+(1-settings.helmet_lv4)*headshotMultiplier))
 	
 	entity player = DamageInfo_GetAttacker(damageInfo)
 	float damage = DamageInfo_GetDamage( damageInfo )
@@ -2810,11 +2839,12 @@ void function OnDummyKilled(entity ent, var damageInfo)
 	attacker.p.straferDummyKilledCount++
 	Remote_CallFunction_NonReplay(attacker, "ServerCallback_LiveStatsUIDummiesKilled", attacker.p.straferDummyKilledCount)
 	ChallengesEntities.dummies.removebyvalue(ent)
+	lastDmg = 0
 }
 
 void function OnWeaponAttackChallenges( entity player, entity weapon, string weaponName, int ammoUsed, vector attackOrigin, vector attackDir )
 {
-	if(weapon.GetWeaponClassName() == "mp_weapon_clickweapon") return
+	if(weapon.GetWeaponClassName() == "mp_weapon_lightninggun") return
 	if(!player.p.isChallengeActivated) return
 	int basedamage = weapon.GetWeaponSettingInt( eWeaponVar.damage_near_value )
 	int ornull projectilespershot = weapon.GetWeaponSettingInt( eWeaponVar.projectiles_per_shot )
@@ -2861,11 +2891,13 @@ void function OnPlayerDeathCallbackThread( entity player )
 {
 	if( !player.p.isChallengeActivated )
 		return
+		
+	EndSignal( player, "OnDestroy" )
 
 	wait 1
 	
 	Signal(player, "ChallengeTimeOver")
-	SetupPlayer( player )
+	thread SetupPlayer( player )
 }
 
 int function ReturnShieldAmountForDesiredLevel()
@@ -2933,16 +2965,23 @@ void function ClippingAIWorkaround(entity dummy)
 {
 	dummy.EndSignal("OnDeath")
 	
-	while(IsValid(dummy))
+	while( IsValid(dummy) )
 	{
 		vector traceStart = dummy.EyePosition()
 		vector traceDir   = dummy.GetForwardVector()
 		vector traceEnd   = traceStart + (traceDir * 50000)
 		TraceResults results = TraceLine( traceStart, traceEnd, dummy )
 		
-		if(Distance(dummy.GetOrigin(), results.endPos) <= 150)
-			dummy.SetAngles(Vector(dummy.GetAngles().x, dummy.GetAngles().y*-1, dummy.GetAngles().z) )
+		if( Distance(dummy.GetOrigin(), results.endPos) <= 150 )
+			dummy.SetAngles( Vector( 0, AnglesCompose( dummy.GetAngles(), <0, 180, 0> ).y, 0 ) ) //Vector(dummy.GetAngles().x, dummy.GetAngles().y*-1, dummy.GetAngles().z) )
+
+		if( !FS_PosCanContainDummy( dummy.GetOrigin()) )
+		{
+			PutEntityInSafeSpot( dummy, null, null, dummy.GetOrigin() + AnglesToForward ( dummy.GetAngles() ) * 30, dummy.GetOrigin() )
+		}
 		
+		vector velocity = dummy.GetVelocity()
+		printt( "running dummy vel: ", velocity.Length() )
 		WaitFrame()
 	}	
 }
@@ -2953,7 +2992,7 @@ void function PreChallengeStart(entity player, int challenge)
 	if( IsAlive( player ) )
 		player.Die( null, null, { damageSourceId = eDamageSourceId.damagedef_despawn } )
 	
-	SetupPlayer( player )
+	thread SetupPlayer( player )
 	player.FreezeControlsOnServer()
 
 	player.p.storedWeapons = StoreWeapons(player)
@@ -3227,15 +3266,19 @@ bool function CC_MenuGiveAimTrainerWeapon( entity player, array<string> args )
 	
 	string weapon = args[0]
 	
-	if(GameRules_GetGameMode() != fs_aimtrainer && GetWhiteListedWeapons().len() && GetWhiteListedWeapons().find(weapon) != -1)
+	bool bIs1v1 = g_is1v1GameType() //idc, conditional.	
+	if( Gamemode() != eGamemodes.fs_aimtrainer && !ValidateWeaponTgiveSettings( player, args[0] ) || Gamemode() == eGamemodes.WINTEREXPRESS && !player.GetPlayerNetBool( "WinterExpress_IsPlayerAllowedLegendChange" ) )
+		return true
+	
+	if( Gamemode() != eGamemodes.fs_aimtrainer && GetWhiteListedWeapons().len() && GetWhiteListedWeapons().find(weapon) != -1)
 	{
-		Message(player, "WEAPON WHITELISTED")
+		Message(player, "WEAPON NOT WHITELISTED")
 		return false
 	}
 
-	if(GameRules_GetGameMode() != fs_aimtrainer && GetWhiteListedAbilities().len() && GetWhiteListedAbilities().find(weapon) != -1 )
+	if( Gamemode() != eGamemodes.fs_aimtrainer && GetWhiteListedAbilities().len() && GetWhiteListedAbilities().find(weapon) != -1 )
 	{
-		Message(player, "ABILITY WHITELISTED")
+		Message(player, "ABILITY NOT WHITELISTED")
 		return false
 	}
 
@@ -3253,295 +3296,307 @@ bool function CC_MenuGiveAimTrainerWeapon( entity player, array<string> args )
 
 	entity weaponent
 	array<string> finalargs
-	if (args.len() > 2) //from attachments buy box
+	if (args.len() > 2 && weapon != "mp_weapon_lightninggun" ) //from attachments buy box
+	{
+		string optic = "none"
+		string barrel = "none"
+		string stock = "none"
+		string shotgunbolt = "none"
+		string mag = "none"
+
+		// printt("DEBUG BEFORE CONVERT: " + args[2], args[3], args[4], args[5], args[6], args[7])
+
+		switch( args[2] ){
+			case "0":
+				optic = "none"
+				break
+			case "1":
+				optic = "optic_cq_hcog_classic"
+				break
+			case "2":
+				optic = "optic_cq_holosight"
+				break
+			case "3":
+				optic = "optic_cq_threat"
+				break
+			case "4":
+				optic = "optic_cq_holosight_variable"
+				break
+			case "5":	
+				optic = "optic_cq_hcog_bruiser"
+				break
+		}
+
+		if( args[6] == "smg" || weapon == "mp_weapon_autopistol" )
 		{
-			string optic = "none"
-			string barrel = "none"
-			string stock = "none"
-			string shotgunbolt = "none"
-			string mag = "none"
-
-			// printt("DEBUG BEFORE CONVERT: " + args[2], args[3], args[4], args[5], args[6], args[7])
-
-			switch( args[2] ){
+			switch( args[3] ){
 				case "0":
-					optic = "none"
+					barrel = "none"
 					break
 				case "1":
-					optic = "optic_cq_hcog_classic"
+					barrel = "laser_sight_l1"
 					break
 				case "2":
-					optic = "optic_cq_holosight"
+					barrel = "laser_sight_l2"
 					break
 				case "3":
-					optic = "optic_cq_threat"
-					break
-				case "4":
-					optic = "optic_cq_holosight_variable"
-					break
-				case "5":	
-					optic = "optic_cq_hcog_bruiser"
+					barrel = "laser_sight_l3"
 					break
 			}
-
-			if( args[6] == "smg" || weapon == "mp_weapon_autopistol" )
-			{
-				switch( args[3] ){
-					case "0":
-						barrel = "none"
-						break
-					case "1":
-						barrel = "laser_sight_l1"
-						break
-					case "2":
-						barrel = "laser_sight_l2"
-						break
-					case "3":
-						barrel = "laser_sight_l3"
-						break
-				}
-			}
-			else
-			{
-				switch( args[3] ){
-					case "0":
-						barrel = "none"
-						break
-					case "1":
-						barrel = "barrel_stabilizer_l1"
-						break
-					case "2":
-						barrel = "barrel_stabilizer_l2"
-						break
-					case "3":
-						barrel = "barrel_stabilizer_l3"
-						break
-				}
-			}
-
-			switch(args[4]){
-					case "0":
-						stock = "none"
-						break
-					case "1":
-						stock = "stock_tactical_l1"
-						break
-					case "2":
-						stock = "stock_tactical_l2"
-						break
-					case "3":
-						stock = "stock_tactical_l3"
-						break
-				}
-			
-			if( args[6] == "sniper" || args[6] == "sniper2" || args[6] == "marksman" || args[6] == "marksman2")
-				switch(args[4]){
-					case "0":
-						stock = "none"
-						break
-					case "1":
-						stock = "stock_sniper_l1"
-						break
-					case "2":
-						stock = "stock_sniper_l2"
-						break
-					case "3":
-						stock = "stock_sniper_l3"
-						break
-				}		
-			
-			switch(args[5]){
-					case "0":
-						shotgunbolt = "none"
-						break
-					case "1":
-						shotgunbolt = "shotgun_bolt_l1"
-						break
-					case "2":
-						shotgunbolt = "shotgun_bolt_l2"
-						break
-					case "3":
-						shotgunbolt = "shotgun_bolt_l3"
-						break
-				}
-				
-			if(weapon == "mp_weapon_energy_ar" || weapon == "mp_weapon_esaw")
-			{
-				switch(args[5]){
-					case "0":
-						shotgunbolt = "."
-						break
-					case "1":
-						shotgunbolt = "hopup_turbocharger"
-						break
-				}
-			}else if(weapon == "mp_weapon_g2")
-			{
-				switch(args[5]){
-					case "0":
-						shotgunbolt = "."
-						break
-					case "1":
-						shotgunbolt = "hopup_double_tap"
-						break
-				}	
-			}else if(weapon == "mp_weapon_doubletake")
-			{
-				switch(args[5]){
-					case "0":
-						shotgunbolt = "."
-						break
-					case "1":
-						shotgunbolt = "hopup_energy_choke"
-						break
-				}			
-			}
-			
-			if(args[6] == "ar" || args[6] == "ar2" || args[6] == "lmg" || args[6] == "lmg2" || args[6] == "sniper" || args[6] == "sniper2" || args[6] == "marksman" || args[6] == "marksman2")
-			switch(args[2]){
+		}
+		else
+		{
+			switch( args[3] ){
 				case "0":
-					optic = "none"
+					barrel = "none"
 					break
 				case "1":
-					optic = "optic_cq_hcog_classic"
+					barrel = "barrel_stabilizer_l1"
 					break
 				case "2":
-					optic = "optic_cq_holosight"
+					barrel = "barrel_stabilizer_l2"
 					break
 				case "3":
-					optic = "optic_cq_holosight_variable"
-					break
-				case "4":
-					optic = "optic_cq_hcog_bruiser"
-					break
-				case "5":	
-					optic = "optic_ranged_hcog"
-					break
-				case "6":	
-					optic = "optic_ranged_aog_variable"
-					break
-				case "7":	
-					optic = "optic_sniper"
-					break
-				case "8":	
-					optic = "optic_sniper_variable"
-					break
-				case "9":	
-					optic = "optic_sniper_threat"
-					break
-			}
-
-			switch(args[7]){
-					case "0":
-						mag = "none"
-						break
-					case "1":
-						if(args[8] == "bullet")
-							mag = "bullets_mag_l1"
-						else if(args[8] == "highcal")
-							mag = "highcal_mag_l1"
-						else if(args[8] == "special")
-							mag = "energy_mag_l1"
-						else if(args[8] == "sniper")
-							mag = "sniper_mag_l1"
-						break
-					case "2":
-						if(args[8] == "bullet")
-							mag = "bullets_mag_l2"
-						else if(args[8] == "highcal")
-							mag = "highcal_mag_l2"
-						else if(args[8] == "special")
-							mag = "energy_mag_l2"
-						else if(args[8] == "sniper")
-							mag = "sniper_mag_l2"
-						break
-					case "3":
-						if(args[8] == "bullet")
-							mag = "bullets_mag_l3"
-						else if(args[8] == "highcal")
-							mag = "highcal_mag_l3"
-						else if(args[8] == "special")
-							mag = "energy_mag_l3"
-						else if(args[8] == "sniper")
-							mag = "sniper_mag_l3"
-						break
-				}
-
-			// printt( "DEBUG AFTER CONVERT: " + optic, barrel, stock, shotgunbolt, args[6], mag )
-
-			switch(args[6])
-			{
-				case "smg":
-					if(optic != "none") finalargs.append(optic)
-					if(barrel != "none") finalargs.append(barrel)
-					if(stock != "none") finalargs.append(stock)
-					if(mag != "none") finalargs.append(mag)	
-					
-					break
-				case "pistol":
-					if(optic != "none") finalargs.append(optic)
-					if(barrel != "none") finalargs.append(barrel)
-					if(mag != "none") finalargs.append(mag)
-					break
-				case "pistol2":
-					if(optic != "none") finalargs.append(optic)
-					if(mag != "none") finalargs.append(mag)
-					break
-				case "shotgun":
-					if(optic != "none") finalargs.append(optic)
-					if(shotgunbolt != "none") finalargs.append(shotgunbolt)
-					break
-				case "lmg2":
-				case "ar":
-					if(optic != "none") finalargs.append(optic)
-					if(barrel != "none") finalargs.append(barrel)
-					if(stock != "none") finalargs.append(stock)
-					if(shotgunbolt != "." && weapon == "mp_weapon_esaw") finalargs.append(shotgunbolt)
-					if(mag != "none") finalargs.append(mag)
-					break
-				case "ar2":
-					if(optic != "none") finalargs.append(optic)
-					if(stock != "none") finalargs.append(stock)
-					if(shotgunbolt != "." && weapon == "mp_weapon_energy_ar") finalargs.append(shotgunbolt)
-					if(mag != "none") finalargs.append(mag)				
-					break
-				case "marksman":
-					if(optic != "none") finalargs.append(optic)
-					if(barrel != "none") finalargs.append(barrel)
-					if(stock != "none") finalargs.append(stock)
-					if(shotgunbolt != "." ) finalargs.append(shotgunbolt)
-					if(mag != "none") finalargs.append(mag)
-					break
-				case "marksman2":
-					if(optic != "none") finalargs.append(optic)
-					if(stock != "none") finalargs.append(stock)
-					if(shotgunbolt != "." ) finalargs.append(shotgunbolt)
-					if(mag != "none") finalargs.append(mag)
-					break
-				case "marksman3":
-					if(optic != "none") finalargs.append(optic)
-					if(stock != "none") finalargs.append(stock)
-					if(mag != "none") finalargs.append(mag)	
-					break
-				case "sniper":
-					if(optic != "none") finalargs.append(optic)
-					if(barrel != "none") finalargs.append(barrel)
-					if(stock != "none") finalargs.append(stock)
-					if(mag != "none") finalargs.append(mag)
-					break
-				case "sniper2":
-					if(optic != "none") finalargs.append(optic)
-					if(stock != "none") finalargs.append(stock)
+					barrel = "barrel_stabilizer_l3"
 					break
 			}
 		}
 
-	if ( weapon == "mp_weapon_clickweapon" || weapon == "mp_weapon_clickweaponauto" )
-		Remote_CallFunction_NonReplay(player, "ServerCallback_ToggleDotForHitscanWeapons", true)
-	else
-		Remote_CallFunction_NonReplay(player, "ServerCallback_ToggleDotForHitscanWeapons", false)
+		switch(args[4]){
+				case "0":
+					stock = "none"
+					break
+				case "1":
+					stock = "stock_tactical_l1"
+					break
+				case "2":
+					stock = "stock_tactical_l2"
+					break
+				case "3":
+					stock = "stock_tactical_l3"
+					break
+			}
+		
+		if( args[6] == "sniper" || args[6] == "sniper2" || args[6] == "marksman" || args[6] == "marksman2")
+			switch(args[4]){
+				case "0":
+					stock = "none"
+					break
+				case "1":
+					stock = "stock_sniper_l1"
+					break
+				case "2":
+					stock = "stock_sniper_l2"
+					break
+				case "3":
+					stock = "stock_sniper_l3"
+					break
+			}		
+		
+		switch(args[5]){
+				case "0":
+					shotgunbolt = "none"
+					break
+				case "1":
+					shotgunbolt = "shotgun_bolt_l1"
+					break
+				case "2":
+					shotgunbolt = "shotgun_bolt_l2"
+					break
+				case "3":
+					shotgunbolt = "shotgun_bolt_l3"
+					break
+			}
+			
+		if(weapon == "mp_weapon_energy_ar" || weapon == "mp_weapon_esaw")
+		{
+			switch(args[5]){
+				case "0":
+					shotgunbolt = "."
+					break
+				case "1":
+					shotgunbolt = "hopup_turbocharger"
+					break
+			}
+		}else if(weapon == "mp_weapon_g2")
+		{
+			switch(args[5]){
+				case "0":
+					shotgunbolt = "."
+					break
+				case "1":
+					shotgunbolt = "hopup_double_tap"
+					break
+			}	
+		}else if(weapon == "mp_weapon_doubletake")
+		{
+			switch(args[5]){
+				case "0":
+					shotgunbolt = "."
+					break
+				case "1":
+					shotgunbolt = "hopup_energy_choke"
+					break
+			}			
+		}
+		
+		if(args[6] == "ar" || args[6] == "ar2" || args[6] == "lmg" || args[6] == "lmg2" || args[6] == "sniper" || args[6] == "sniper2" || args[6] == "marksman" || args[6] == "marksman2")
+		switch(args[2]){
+			case "0":
+				optic = "none"
+				break
+			case "1":
+				optic = "optic_cq_hcog_classic"
+				break
+			case "2":
+				optic = "optic_cq_holosight"
+				break
+			case "3":
+				optic = "optic_cq_holosight_variable"
+				break
+			case "4":
+				optic = "optic_cq_hcog_bruiser"
+				break
+			case "5":	
+				optic = "optic_ranged_hcog"
+				break
+			case "6":	
+				optic = "optic_ranged_aog_variable"
+				break
+			case "7":	
+				optic = "optic_sniper"
+				break
+			case "8":	
+				optic = "optic_sniper_variable"
+				break
+			case "9":	
+				optic = "optic_sniper_threat"
+				break
+		}
 
+		switch(args[7]){
+				case "0":
+					mag = "none"
+					break
+				case "1":
+					if(args[8] == "bullet")
+						mag = "bullets_mag_l1"
+					else if(args[8] == "highcal")
+						mag = "highcal_mag_l1"
+					else if(args[8] == "special")
+						mag = "energy_mag_l1"
+					else if(args[8] == "sniper")
+						mag = "sniper_mag_l1"
+					break
+				case "2":
+					if(args[8] == "bullet")
+						mag = "bullets_mag_l2"
+					else if(args[8] == "highcal")
+						mag = "highcal_mag_l2"
+					else if(args[8] == "special")
+						mag = "energy_mag_l2"
+					else if(args[8] == "sniper")
+						mag = "sniper_mag_l2"
+					break
+				case "3":
+					if(args[8] == "bullet")
+						mag = "bullets_mag_l3"
+					else if(args[8] == "highcal")
+						mag = "highcal_mag_l3"
+					else if(args[8] == "special")
+						mag = "energy_mag_l3"
+					else if(args[8] == "sniper")
+						mag = "sniper_mag_l3"
+					break
+			}
+
+		// printt( "DEBUG AFTER CONVERT: " + optic, barrel, stock, shotgunbolt, args[6], mag )
+
+		switch(args[6])
+		{
+			case "smg":
+				if(optic != "none") finalargs.append(optic)
+				if(barrel != "none") finalargs.append(barrel)
+				if(stock != "none") finalargs.append(stock)
+				if(mag != "none") finalargs.append(mag)	
+				
+				break
+			case "pistol":
+				if(optic != "none") finalargs.append(optic)
+				if(barrel != "none") finalargs.append(barrel)
+				if(mag != "none") finalargs.append(mag)
+				break
+			case "pistol2":
+				if(optic != "none") finalargs.append(optic)
+				if(mag != "none") finalargs.append(mag)
+				break
+			case "shotgun":
+				if(optic != "none") finalargs.append(optic)
+				if(shotgunbolt != "none") finalargs.append(shotgunbolt)
+				break
+			case "lmg2":
+			case "ar":
+				if(optic != "none") finalargs.append(optic)
+				if(barrel != "none") finalargs.append(barrel)
+				if(stock != "none") finalargs.append(stock)
+				if(shotgunbolt != "." && weapon == "mp_weapon_esaw") finalargs.append(shotgunbolt)
+				if(mag != "none") finalargs.append(mag)
+				break
+			case "ar2":
+				if(optic != "none") finalargs.append(optic)
+				if(stock != "none") finalargs.append(stock)
+				if(shotgunbolt != "." && weapon == "mp_weapon_energy_ar") finalargs.append(shotgunbolt)
+				if(mag != "none") finalargs.append(mag)				
+				break
+			case "marksman":
+				if(optic != "none") finalargs.append(optic)
+				if(barrel != "none") finalargs.append(barrel)
+				if(stock != "none") finalargs.append(stock)
+				if(shotgunbolt != "." ) finalargs.append(shotgunbolt)
+				if(mag != "none") finalargs.append(mag)
+				break
+			case "marksman2":
+				if(optic != "none") finalargs.append(optic)
+				if(stock != "none") finalargs.append(stock)
+				if(shotgunbolt != "." ) finalargs.append(shotgunbolt)
+				if(mag != "none") finalargs.append(mag)
+				break
+			case "marksman3":
+				if(optic != "none") finalargs.append(optic)
+				if(stock != "none") finalargs.append(stock)
+				if(mag != "none") finalargs.append(mag)	
+				break
+			case "sniper":
+				if(optic != "none") finalargs.append(optic)
+				if(barrel != "none") finalargs.append(barrel)
+				if(stock != "none") finalargs.append(stock)
+				if(mag != "none") finalargs.append(mag)
+				break
+			case "sniper2":
+				if(optic != "none") finalargs.append(optic)
+				if(stock != "none") finalargs.append(stock)
+				break
+		}
+	}
+
+	bool autonoauto = false
+	if( weapon == "mp_weapon_lightninggun" )
+	{
+		autonoauto = true
+	} else if( weapon == "mp_weapon_lightninggun_auto" )
+	{
+		weapon = "mp_weapon_lightninggun"
+		autonoauto = false
+	}
+		
 	weaponent = player.GiveWeapon_NoDeploy( weapon, actualslot, finalargs, false )
+
+	if( weapon == "mp_weapon_lightninggun" && autonoauto )
+	{
+		weaponent.AddMod( "noauto" )
+		finalargs.append( "noauto" )
+		printt( "lightning gun - added no auto mod" )
+	}
 
 	if(!IsValid(actualweapon)) player.SetActiveWeaponBySlot( eActiveInventorySlot.mainHand, actualslot )
 
@@ -3560,16 +3615,16 @@ bool function CC_MenuGiveAimTrainerWeapon( entity player, array<string> args )
 
 		weapon1 = SURVIVAL_GetWeaponBySlot( player, WEAPON_INVENTORY_SLOT_PRIMARY_0 ) // This function returns weapon class name if there's weapon, otherwise returns empty string
 		weapon2 = SURVIVAL_GetWeaponBySlot( player, WEAPON_INVENTORY_SLOT_PRIMARY_1 )
-
+		
 		if( weapon1 != "" ) // Primary slot
 		{
 			mods1 = GetWeaponMods( player.GetNormalWeapon( WEAPON_INVENTORY_SLOT_PRIMARY_0 ) )
 			foreach (mod in mods1)
 				optics1 = mod + " " + optics1
 			
-			weaponname1 = "tgive p " + weapon1 + " " + optics1 + "; "
+			weaponname1 = "tgive p " + weapon1 + " " + optics1 + ( bIs1v1 ? "" : "; " )		
 		}
-
+		
 		if( weapon2 != "" ) // Secondary Slot
 		{
 			mods2 = GetWeaponMods( player.GetNormalWeapon( WEAPON_INVENTORY_SLOT_PRIMARY_1 ) )
@@ -3579,21 +3634,73 @@ bool function CC_MenuGiveAimTrainerWeapon( entity player, array<string> args )
 			weaponname2 = "tgive s " + weapon2 + " " + optics2
 		}
 
-		weaponlist[ player.GetPlayerName() ] <- weaponname1 + weaponname2
+		if( bIs1v1 ) 
+		{			
+			array<string> wep1Array = split( weaponname1, " " )
+		
+			if( args[1] == "p" )
+			{
+				player.p.ratelimit = 0.0;				
+			
+					wep1Array[0] = "wepmenu"; //print_string_array( wep1Array )
+				
+						ClientCommand_GiveWeapon( player, wep1Array )
+							
+							return true
+			}
+			else
+			{		
+				array<string> wep2Array = split( weaponname2, " " )
+				
+					if ( wep2Array[1] == "s" )
+					{
+						player.p.ratelimit = 0;	
+					
+							wep2Array[0] = "wepmenu"; //print_string_array( wep2Array )	
+						
+								ClientCommand_GiveWeapon( player, wep2Array )	
+									
+									return true
+					}												
+			}
+		}
+		else 
+		{
+			weaponlist[ player.GetPlayerName() ] <- weaponname1 + weaponname2
+		}
 	}
 
 	int weaponSkin = -1
 	int weaponModelIndex = -1
-	switch( weaponent.GetWeaponClassName() )
+
+	if( InfiniteAmmoEnabled() )
+		SetupInfiniteAmmoForWeapon( player, weaponent )
+	else if( GetCurrentPlaylistVarInt( "give_weapon_stack_count_amount", 0 ) != 0 )
+	{	
+		player.AmmoPool_SetCapacity( SURVIVAL_MAX_AMMO_PICKUPS )
+
+		SetupPlayerReserveAmmo( player, weaponent )
+
+		player.ClearFirstDeployForAllWeapons()
+		player.DeployWeapon()
+
+		if( weaponent.UsesClipsForAmmo() )
+			weaponent.SetWeaponPrimaryClipCount( weaponent.GetWeaponPrimaryClipCountMax() )	
+	}
+
+	if( Playlist() == ePlaylists.fs_aimtrainer )
 	{
-		case "mp_weapon_car":
-			weaponSkin = weaponent.GetSkinIndexByName( "charm_preview_black" )
-			break
-		case "mp_weapon_wingman":
-		case "mp_weapon_r97":
-			weaponModelIndex = 2
-			weaponSkin = RandomInt( weaponent.GetSkinCount() )
-			break
+		switch( weaponent.GetWeaponClassName() )
+		{
+			case "mp_weapon_car":
+				weaponSkin = weaponent.GetSkinIndexByName( "charm_preview_black" )
+				break
+			case "mp_weapon_wingman":
+			case "mp_weapon_r97":
+				weaponModelIndex = 2
+				weaponSkin = RandomInt( weaponent.GetSkinCount() )
+				break
+		}
 	}
 	
 	if(slot == "p")
@@ -3637,11 +3744,32 @@ bool function CC_MenuGiveAimTrainerWeapon( entity player, array<string> args )
 		}
 	}
 
+	if( GetCurrentPlaylistVarBool( "flowstate_giveskins_weapons", false ) )
+	{
+		ItemFlavor ornull weaponSkinOrNull = null
+		array<string> fsCharmsToUse = [ "SAID00701640565", "SAID01451752993", "SAID01334887835", "SAID01993399691", "SAID00095078608", "SAID01439033541", "SAID00510535756", "SAID00985605729" ]
+		int chosenCharm = ConvertItemFlavorGUIDStringToGUID( fsCharmsToUse.getrandom() )
+		ItemFlavor ornull weaponCharmOrNull = GetCurrentPlaylistVarBool( "flowstate_givecharms_weapons", false ) == false ? null : GetItemFlavorByGUID( chosenCharm )
+		ItemFlavor ornull weaponFlavor = GetWeaponItemFlavorByClass( weapon )
+
+		if( weaponFlavor != null )
+		{
+			array<int> weaponLegendaryIndexMap = FS_ReturnLegendaryModelMapForWeaponFlavor( expect ItemFlavor( weaponFlavor ) )
+			if( weaponLegendaryIndexMap.len() > 1 && GetCurrentPlaylistVarBool( "flowstate_giveskins_weapons", false ) )
+				weaponSkinOrNull = GetItemFlavorByGUID( weaponLegendaryIndexMap[RandomIntRangeInclusive(1,weaponLegendaryIndexMap.len()-1)] )
+		}
+
+		WeaponCosmetics_Apply( weaponent, weaponSkinOrNull, weaponCharmOrNull )
+	}
+	
 	return true
 }
 
 void function SetupPlayer( entity player, bool fromSelector = false )
 {
+	EndSignal( player, "OnDestroy" )
+	WaitEndFrame() //has to wait until player dies
+	
 	DecideRespawnPlayer( player, false )
 
 	Inventory_SetPlayerEquipment(player, "armor_pickup_lv1", "armor")
@@ -3704,7 +3832,7 @@ void function SetupPlayer( entity player, bool fromSelector = false )
 
 bool function CC_Weapon_Selector_Open( entity player, array<string> args )
 {
-	SetupPlayer( player, true )
+	thread SetupPlayer( player, true )
 
 	player.SetOrigin(AimTrainer_startPos)
 	player.SetAngles(AimTrainer_startAngs)
