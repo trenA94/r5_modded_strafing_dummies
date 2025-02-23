@@ -312,12 +312,10 @@ void function StrafeMovement(entity ai, entity player)
 {
 	table<string, string> lastDir = {}
 	table<string, string> curDir = {}
-	int randDir
 	int max
 	int min
 	int dodged
 	int globalBias
-	int bias
 	int travelled
 	int length
 	int maxLength
@@ -332,7 +330,7 @@ void function StrafeMovement(entity ai, entity player)
 	}
 	else if(AimTrainer_STRAFING_SPEED == 1)
 	{
-		min = 3
+		min = 2
 		max = 6
 	}
 	else if(AimTrainer_STRAFING_SPEED == 2)
@@ -342,7 +340,7 @@ void function StrafeMovement(entity ai, entity player)
 	}
 	else if(AimTrainer_STRAFING_SPEED == 3)
 	{
-		min = 5
+		min = 4
 		max = 10
 	}
 	else
@@ -366,10 +364,7 @@ void function StrafeMovement(entity ai, entity player)
 	ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
 	while(IsValid(ai))
 	{
-		bias = RandomIntRangeInclusive(0,5)
-		if(CoinFlip()) bias *= -1
-		randDir = RandomIntRangeInclusive(1,10)
-		if(randDir+bias > 5) curDir = rightActions
+		if(CoinFlip()) curDir = rightActions
 		else curDir = leftActions
 		travelled = 0
 		length = 0
@@ -403,8 +398,8 @@ void function StrafeMovement(entity ai, entity player)
 				}
 				if(CoinFlip()) 
 				{
-					if(CoinFlip()) maxLength = RandomIntRangeInclusive(5, 10)
-					else maxLength = RandomIntRangeInclusive(2, 4)
+					if(CoinFlip()) maxLength = RandomIntRangeInclusive(6, 10)
+					else maxLength = RandomIntRangeInclusive(2, 6)
 				}
 			}
 
