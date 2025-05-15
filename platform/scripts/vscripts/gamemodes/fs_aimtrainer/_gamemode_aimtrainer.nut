@@ -1,24 +1,3 @@
-/*
-Flowstate Aim Trainer v1.0 - Made by CafeFPS (server, client, ui)
-Discord: @CafeFPS | Twitter: @CafeFPS
-Support me: https://ko-fi.com/r5r_colombia
-
-More credits:
-- Skeptation#4002 -- beta tester and coworker https://www.youtube.com/c/Skeptation
-- Amos#1368 & contributors -- sdk https://github.com/Mauler125/r5sdk/tree/indev
-- rexx#1287 & contributors -- repak tool https://github.com/r-ex/RePak
-- JustANormalUser#6809 -- custom weapons framework
-- Zee#6969 -- weapons buy menu example, history ui pages
-- Darkes#8647 -- beta tester
-- Rego#2848 -- beta tester
-- michae\l/#1125 -- beta tester
-- James9950#5567 -- beta tester
-- (--__GimmYnkia__--)#2995 -- beta tester
-- oliver#1375 -- beta tester
-- Rin 暗#5862 -- beta tester
-- 暇人のEndergreen#7138 -- contributor, bugs fixes/code improvements
-*/
-
 global function  _ChallengesByColombia_Init
 global function StartFRChallenges
 global function CreateMovementMapDummie
@@ -37,8 +16,6 @@ vector onGroundDummyPos
 vector AimTrainer_startPos
 vector AimTrainer_startAngs
 
-int lastDmg
-
 struct{
 	array<entity> floor
 	array<entity> dummies
@@ -50,6 +27,15 @@ struct
 	float helmet_lv4 = 0.65
 	
 } settings
+
+struct{
+	array<var> recordingAnims
+}file
+
+int damaged
+
+table<int, array<ChallengeScore> > ChallengesData //implement this
+table<int, int> ChallengesBestScores
 
 table<string, string> rightActions = {
 	curDir = "ACT_RUN_RIGHT",
@@ -64,9 +50,6 @@ table<string, string> leftActions = {
 	oppDir = "ACT_RUN_RIGHT",
 	oppTmpDir = "ACT_STRAFE_TO_STAND_RIGHT"
 }
-
-table<int, array<ChallengeScore> > ChallengesData //implement this
-table<int, int> ChallengesBestScores
 
 void function _ChallengesByColombia_Init()
 {
@@ -132,6 +115,7 @@ void function _ChallengesByColombia_Init()
 	//required assets for different challenges
 	PrecacheParticleSystem($"P_enemy_jump_jet_ON_trails")
 	PrecacheParticleSystem( $"P_skydive_trail_CP" )
+	PrecacheParticleSystem( FIRINGRANGE_ITEM_RESPAWN_PARTICLE )
 	PrecacheModel($"mdl/imc_interior/imc_int_fusebox_01.rmdl")
 	PrecacheModel($"mdl/barriers/shooting_range_target_02.rmdl")
 	PrecacheModel($"mdl/thunderdome/thunderdome_cage_wall_256x256_01.rmdl")
@@ -146,46 +130,56 @@ void function _ChallengesByColombia_Init()
 		case eMaps.mp_rr_desertlands_64k_x_64k:
 		case eMaps.mp_rr_desertlands_64k_x_64k_nx:
 		case eMaps.mp_rr_desertlands_64k_x_64k_tt:
-		floorLocation = <-10020.1543, -8643.02832, 5189.92578>
-		onGroundLocationPos = <12891.2783, -2391.77124, -3121.60132>
-		onGroundLocationAngs = <0, -157.629303, 0>
-		AimTrainer_startPos = <10623.7773, 4953.48975, -4303.92041>
-		AimTrainer_startAngs = <0, 143.031052, 0>	
+		case eMaps.mp_rr_desertlands_mu1:
+		case eMaps.mp_rr_desertlands_mu1_tt:
+		case eMaps.mp_rr_desertlands_mu2:
+		case eMaps.mp_rr_desertlands_holiday:
+			floorLocation = <-10020.1543, -8643.02832, 5189.92578>
+			onGroundLocationPos = <12891.2783, -2391.77124, -3121.60132>
+			onGroundLocationAngs = <0, -157.629303, 0>
+			AimTrainer_startPos = <10623.7773, 4953.48975, -4303.92041>
+			AimTrainer_startAngs = <0, 143.031052, 0>	
 		break
 
 		case eMaps.mp_rr_canyonlands_staging:
-		floorLocation = <35306.2344, -16956.5098, -27010.2539>
-		onGroundLocationPos = <33946,-6511,-28859>
-		onGroundLocationAngs = <0,-90,0>
-		AimTrainer_startPos = <32645.04,-9575.77,-25911.94>
-		AimTrainer_startAngs = <7.71,91.67,0.00>	
+			floorLocation = <35306.2344, -16956.5098, -27010.2539>
+			onGroundLocationPos = <33946,-6511,-28859>
+			onGroundLocationAngs = <0,-90,0>
+			AimTrainer_startPos = <32645.04,-9575.77,-25911.94>
+			AimTrainer_startAngs = <7.71,91.67,0.00>	
 		break
 
 		case eMaps.mp_rr_canyonlands_mu1:
 		case eMaps.mp_rr_canyonlands_mu1_night:
 		case eMaps.mp_rr_canyonlands_64k_x_64k:
-		floorLocation = <-11964.7803, -8858.25098, 17252.25>
-		onGroundLocationPos = <-14599.2178, -7073.89551, 2703.93286>
-		onGroundLocationAngs = <0,90,0>
-		AimTrainer_startPos = <-16613.873, -487.12088, 3312.10791>
-		AimTrainer_startAngs = <0, 144.184357, 0>
+		case eMaps.mp_rr_canyonlands_mu2:
+		case eMaps.mp_rr_canyonlands_mu2_tt:
+		case eMaps.mp_rr_canyonlands_mu2_mv:
+		case eMaps.mp_rr_canyonlands_mu2_ufo:
+			floorLocation = <-11964.7803, -8858.25098, 17252.25>
+			onGroundLocationPos = <-14599.2178, -7073.89551, 2703.93286>
+			onGroundLocationAngs = <0,90,0>
+			AimTrainer_startPos = <-16613.873, -487.12088, 3312.10791>
+			AimTrainer_startAngs = <0, 144.184357, 0>
 		break
 
-		case eMaps.mp_rr_olympus_mu1:
-		floorLocation = <9857.08496, -7948.96631, -1000>
-		onGroundLocationPos = <-13700.8594, 26238.1387, -6891.95508>
-		onGroundLocationAngs = <0, 175.306152, 0>
-		AimTrainer_startPos = <-34234.2148, 9426.86426, -5563.96875>
-		AimTrainer_startAngs = <0, 69.2027512, 0>
-
-		case eMaps.mp_rr_aqueduct_night:
-		floorLocation = <-11964.7803, -8858.25098, 17252.25>
-		onGroundLocationPos = <-6317.76, -2204.78, 374.85>
-		onGroundLocationAngs = <0,60,0>
-		AimTrainer_startPos = <-6317.76, -2204.78, 374.85>
-		AimTrainer_startAngs = <0,60,0>
-
+		case eMaps.mp_rr_olympus:
+		case eMaps.mp_rr_olympus_tt:
+			floorLocation = <9857.08496, -7948.96631, -1000>
+			onGroundLocationPos = <-13700.8594, 26238.1387, -6891.95508>
+			onGroundLocationAngs = <0, 175.306152, 0>
+			AimTrainer_startPos = <-34234.2148, 9426.86426, -5563.96875>
+			AimTrainer_startAngs = <0, 69.2027512, 0>
 		break
+		
+		case eMaps.mp_rr_arena_phase_runner:
+			floorLocation = <-11964.7803, -8858.25098, 17252.25>
+			onGroundLocationPos = <32107, 16011, -1103>
+			onGroundLocationAngs = <0,-132,0>
+			AimTrainer_startPos = <32107, 16011, -1103>
+			AimTrainer_startAngs = <0,-132,0>
+		break
+		
 		default:
 		// cutsceneSpawns.append(NewCameraPair(<-3096.13501, 632.377991, 1913.47217>, <0, -134.430405, 0> ))
 		
@@ -260,45 +254,123 @@ vector function AimTrainerOriginToGround( vector origin )
 	return traceResult.endPos
 }
 
+table<string, string> function GetDirection()
+{
+	table<string, string> rv
+	if(CoinFlip()) rv = rightActions
+	else rv = leftActions
+	return rv
+}
+
+float function GetAngleDiff(entity player, entity ai)
+{
+	vector aiPos = ai.GetOrigin() + -player.GetOrigin()
+	float dist = Length2D(aiPos)
+	if(dist <= 400)
+	{
+		return 1.0
+	}
+	vector projectedPos = player.GetOrigin() + AnglesToForward(player.GetAngles())*dist + -player.GetOrigin()
+	return DotProduct(Normalize(<aiPos.x, aiPos.y, 0>), Normalize(<projectedPos.x, projectedPos.y, 0>))
+}
+
+void function AssignCharacter( entity player, int index )
+{
+	ItemFlavor PersonajeEscogido = GetAllCharacters()[index]
+	CharacterSelect_AssignCharacter( ToEHI( player ), PersonajeEscogido )		
+	
+	ItemFlavor playerCharacter = LoadoutSlot_GetItemFlavor( ToEHI( player ), Loadout_CharacterClass() )
+	asset characterSetFile = CharacterClass_GetSetFile( playerCharacter )
+	player.SetPlayerSettingsWithMods( characterSetFile, [] )
+}
+
+void function ReplayRecorded(entity player)
+{
+	if(!IsValid(player)) return
+
+	player.SetOrigin(onGroundLocationPos + AnglesToForward(onGroundLocationAngs)*100*AimTrainer_SPAWN_DISTANCE)
+	player.SetAngles(onGroundLocationAngs + Vector(0, 180, 0))
+	AssignCharacter(player, 8)
+
+	entity dummy = CreateDummy( 99, AimTrainerOriginToGround(onGroundLocationPos), onGroundLocationAngs )
+	SetSpawnOption_AISettings( dummy, "npc_dummie_wraith" )
+	dummy.Hide()
+	DispatchSpawn( dummy )
+	dummy.SetOrigin(dummy.GetOrigin() + Vector(0,0,1))
+	dummy.SetShieldHealthMax( ReturnShieldAmountForDesiredLevel() )
+	dummy.SetShieldHealth( ReturnShieldAmountForDesiredLevel() )
+	dummy.SetMaxHealth( 100 )//AimTrainer_AI_HEALTH - locking the dummie health due to a weird graphic issue, need to fix in the future
+	dummy.SetHealth( 100 )//AimTrainer_AI_HEALTH
+	SetCommonDummyLines(dummy)
+	
+	EndSignal(player, "ChallengeTimeOver")
+	OnThreadEnd(
+		function() : ( player, dummy)
+		{
+			OnChallengeEnd(player)
+			if (IsValid(dummy)) dummy.Destroy()
+		}
+	)
+	
+	wait AimTrainer_PRE_START_TIME
+	RemoveCinematicFlag( player, CE_FLAG_HIDE_MAIN_HUD_INSTANT )
+	//RemoveCinematicFlag( player, CE_FLAG_HIDE_PERMANENT_HUD)
+	var anim = file.recordingAnims[file.recordingAnims.len()-1]
+
+	dummy.PlayRecordedAnimation( anim, AimTrainerOriginToGround(onGroundLocationPos), onGroundLocationAngs, 1 )
+	player.UnfreezeControlsOnServer()
+	dummy.Show()
+
+	float endtime = Time() + AimTrainer_CHALLENGE_DURATION
+	thread ChallengeWatcherThread(endtime, player)
+	dummy.EndSignal("OnDeath")
+	player.EndSignal("ChallengeTimeOver")
+	wait GetRecordedAnimationDuration( anim )
+}
+
 //CHALLENGE "Strafing dummies"
 void function StartStraferDummyChallenge(entity player)
 {
 	if(!IsValid(player)) return
 	player.SetOrigin(onGroundLocationPos)
 	player.SetAngles(onGroundLocationAngs)
+	AssignCharacter(player, 8)
 	
 	EndSignal(player, "ChallengeTimeOver")
 	OnThreadEnd(
 		function() : ( player)
 		{
 			OnChallengeEnd(player)
+			file.recordingAnims.append( player.StopRecordingAnimation() )
 		}
 	)
 	
 	wait AimTrainer_PRE_START_TIME
 	RemoveCinematicFlag( player, CE_FLAG_HIDE_MAIN_HUD_INSTANT )
-	RemoveCinematicFlag( player, CE_FLAG_HIDE_PERMANENT_HUD)
+	//RemoveCinematicFlag( player, CE_FLAG_HIDE_PERMANENT_HUD)
 	player.UnfreezeControlsOnServer()
+	player.StartRecordingAnimation(player.GetOrigin(), player.GetAngles())
 	float endtime = Time() + AimTrainer_CHALLENGE_DURATION
 	thread ChallengeWatcherThread(endtime, player)
 
 	while(true){
 		if(!AimTrainer_INFINITE_CHALLENGE && Time() > endtime) break
 		vector dummypos = player.GetOrigin() + AnglesToForward(onGroundLocationAngs)*100*AimTrainer_SPAWN_DISTANCE
-		entity dummy = CreateLegend_ai_aimtrainer( 99, AimTrainerOriginToGround( dummypos + Vector(0,0,10000)), Vector(0,0,0), true )
+		entity dummy = CreateDummy( 99, AimTrainerOriginToGround( dummypos + Vector(0,0,10000)), Vector(0,0,0) )
 		vector pos = dummy.GetOrigin()
 		vector angles = dummy.GetAngles()
 		StartParticleEffectInWorld( GetParticleSystemIndex( FIRINGRANGE_ITEM_RESPAWN_PARTICLE ), pos, angles )
 		// SetSpawnOption_AISettings( dummy, "npc_dummie_combat_trainer" )
 		DispatchSpawn( dummy )
 		dummy.SetOrigin(dummy.GetOrigin() + Vector(0,0,1))
+		dummy.SetAngles(player.GetAngles() + Vector(0, 180, 0))
 		
 		//PutEntityInSafeSpot( dummy, null, null, dummy.GetOrigin() + dummy.GetUpVector()*2048 + dummy.GetForwardVector()*2048 , dummy.GetOrigin() )
 		
 		dummy.SetShieldHealthMax( ReturnShieldAmountForDesiredLevel() )
 		dummy.SetShieldHealth( ReturnShieldAmountForDesiredLevel() )
-		dummy.SetMaxHealth( AimTrainer_AI_HEALTH )
-		dummy.SetHealth( AimTrainer_AI_HEALTH )
+		dummy.SetMaxHealth( 100 )//AimTrainer_AI_HEALTH - locking the dummie health due to a weird graphic issue, need to fix in the future
+		dummy.SetHealth( 100 )//AimTrainer_AI_HEALTH
 		SetCommonDummyLines(dummy)
 		AddEntityCallback_OnDamaged(dummy, OnStraferDummyDamaged)
 		AddEntityCallback_OnKilled(dummy, OnDummyKilled)
@@ -312,41 +384,48 @@ void function StrafeMovement(entity ai, entity player)
 {
 	table<string, string> lastDir = {}
 	table<string, string> curDir = {}
-	int max
-	int min
+	int started
+	int maxS
+	int minS
 	int dodged
-	int globalBias
-	int travelled
+	int dodgedCD
 	int length
 	int maxLength
 	int stutter
-	int escape
-	float spd = 1.25
+	float spd = 1.33
+	float lastAngleDiff = 1
+	float currentAngleDiff = 1
+	array<float> angleDiffs = []
 
-	if(AimTrainer_STRAFING_SPEED == 0)
+	if(AimTrainer_USER_WANNA_BE_A_DUMMY)
 	{
-		min = 2
-		max = 4
+		minS = 2
+		maxS = 11
+	}
+	else if(AimTrainer_STRAFING_SPEED == 0)
+	{
+		minS = 2
+		maxS = 3
+	}
+	else if(AimTrainer_STRAFING_SPEED == 0.85)
+	{
+		minS = 4
+		maxS = 5
 	}
 	else if(AimTrainer_STRAFING_SPEED == 1)
 	{
-		min = 2
-		max = 6
+		minS = 6
+		maxS = 7
 	}
-	else if(AimTrainer_STRAFING_SPEED == 2)
+	else if(AimTrainer_STRAFING_SPEED == 1.35)
 	{
-		min = 4
-		max = 8
-	}
-	else if(AimTrainer_STRAFING_SPEED == 3)
-	{
-		min = 4
-		max = 10
+		minS = 8
+		maxS = 9
 	}
 	else
 	{
-		min = 2
-		max = 10
+		minS = 10
+		maxS = 11
 	}
 
 	ai.EndSignal("OnDeath")
@@ -360,75 +439,84 @@ void function StrafeMovement(entity ai, entity player)
 		}
 	)
 
-	lastDmg = 1
-	ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
+	//ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
 	while(IsValid(ai))
 	{
-		if(CoinFlip()) curDir = rightActions
-		else curDir = leftActions
-		travelled = 0
-		length = 0
-		escape = 0
-		
-		if(!("curDir" in lastDir)) 
+		if(!started)
 		{
-			ai.Anim_ScriptedPlayActivityByName(curDir.curDir, false, spd)
-			lastDir = curDir
+			curDir = GetDirection()
+			ai.Anim_ScriptedPlayActivityByName(curDir.curDir, true, 0.1)
+			ai.Anim_SetPlaybackRate(spd)
+			started = 1
 		}
-		globalBias = RandomIntRangeInclusive(10, 30)
-		maxLength = RandomIntRangeInclusive(min, max)
-		while(travelled <= globalBias)
+
+		curDir = GetDirection()
+		currentAngleDiff = 0
+		length = 0
+		dodged = 0
+		damaged = 1
+		dodgedCD++
+		maxLength = RandomIntRangeInclusive(minS, maxS)
+		while(length <= maxLength)
 		{
 			if(CoinFlip()) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
-			if(!lastDmg && (dodged < maxLength))
+			if(dodgedCD >= 0 && !damaged)
 			{
-				WaitFrame()
-				dodged++
-				continue
-			}
-			else if(escape >= 10)
-			{
-				dodged = 0
-				lastDmg = 0
-				escape = 0
-				if(CoinFlip())
+				for(int i = 0; i <= 11; i ++)
 				{
-					if(CoinFlip()) curDir = rightActions
-					else curDir = leftActions
+					if(CoinFlip()) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
+					WaitFrame()
+					if(damaged)
+					{
+						//Message(player, "Breaking")
+						break
+					}
 				}
-				if(CoinFlip()) 
-				{
-					if(CoinFlip()) maxLength = RandomIntRangeInclusive(6, 10)
-					else maxLength = RandomIntRangeInclusive(2, 6)
-				}
+				dodgedCD = -2
 			}
-
-			if(curDir != lastDir)
+			else if(curDir != lastDir)
 			{
-				ai.Anim_ScriptedPlayActivityByName(curDir.oppTmpDir, false, 2)
+				ai.Anim_ScriptedPlayActivityByName(curDir.oppTmpDir, false, 0.1)
 				WaitFrame()
-				ai.Anim_ScriptedPlayActivityByName(curDir.curDir, false, spd)
+				ai.Anim_ScriptedPlayActivityByName(curDir.curDir, true, 0.1)
+				ai.Anim_SetPlaybackRate(spd)
 				lastDir = curDir
 			}
 			else if(length == maxLength)
 			{
-				stutter = RandomIntRangeInclusive(2, maxLength)
-				ai.Anim_ScriptedPlayActivityByName(curDir.tmpDir, false, 2)
+				foreach(diff in angleDiffs) currentAngleDiff += diff
+				currentAngleDiff = currentAngleDiff/angleDiffs.len()
+				angleDiffs = []
+				if((angleDiffs.len() < 3 && currentAngleDiff <= 0.99925) || (angleDiffs.len() >= 3 && currentAngleDiff <= 0.9995))
+				{
+					//Message(player, "Bias", currentAngleDiff.tostring())
+					length -= maxLength
+					dodgedCD = 0
+				}
+				if(CoinFlip()) stutter = RandomIntRangeInclusive(2, 4)
+				else stutter = RandomIntRangeInclusive(minS, maxLength)
+				ai.Anim_ScriptedPlayActivityByName(curDir.tmpDir, false, 0.1)
+				ai.Anim_SetPlaybackRate(0.5)
 				WaitFrame()
-				ai.Anim_ScriptedPlayActivityByName(curDir.oppDir, false, spd)
-				wait 0.05*stutter
+				ai.Anim_ScriptedPlayActivityByName(curDir.oppDir, true, 0.1)
+				ai.Anim_SetPlaybackRate(spd)
+				for(int i = 0; i < stutter; i ++)
+				{
+					if(CoinFlip()) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
+					WaitFrame()
+					angleDiffs.append(GetAngleDiff(player, ai))
+				}
 				if(CoinFlip()) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
-				ai.Anim_ScriptedPlayActivityByName(curDir.oppTmpDir, false, 2)
+				ai.Anim_ScriptedPlayActivityByName(curDir.oppTmpDir, false, 0.1)
+				ai.Anim_SetPlaybackRate(0.5)
 				WaitFrame()
-				ai.Anim_ScriptedPlayActivityByName(curDir.curDir, false, spd)
-				length = -1
-				travelled -= stutter
-				maxLength = RandomIntRangeInclusive(min, max)
+				ai.Anim_ScriptedPlayActivityByName(curDir.curDir, true, 0.1)
+				ai.Anim_SetPlaybackRate(spd)
 			}
-			else WaitFrame()
+			WaitFrame()
 			length++
-			travelled++
-			escape++
+			angleDiffs.append(GetAngleDiff(player, ai))
+			damaged = 0
 		}
 	}
 }
@@ -878,6 +966,7 @@ void function CreateDummyStraightUpChallenge(entity player)
 void function StartArcstarsChallenge(entity player)
 {
 	if(!IsValid(player)) return
+	wait 0.1
 	
 	player.SetOrigin(onGroundLocationPos)
 	player.SetAngles(onGroundLocationAngs)
@@ -1013,6 +1102,7 @@ void function ArcstarDummyChangeAngles(entity ai, entity player)
 void function StartVerticalGrenadesChallenge(entity player)
 {
 	if(!IsValid(player)) return
+	wait 0.1
 	
 	ChallengesEntities.floor = CreateFloorAtOrigin(floorLocation, 30, 30)
 	player.SetOrigin(floorCenterForPlayer)
@@ -2324,7 +2414,8 @@ void function StartArmorSwapChallenge(entity player)
 {
 	if(!IsValid(player)) return
 	
-	if( MapName() == eMaps.mp_rr_desertlands_64k_x_64k || MapName() == eMaps.mp_rr_desertlands_64k_x_64k_nx || MapName() == eMaps.mp_rr_desertlands_64k_x_64k_tt )
+	if( MapName() == eMaps.mp_rr_desertlands_64k_x_64k || MapName() == eMaps.mp_rr_desertlands_64k_x_64k_nx || MapName() == eMaps.mp_rr_desertlands_64k_x_64k_tt ||
+	 MapName() == eMaps.mp_rr_desertlands_mu1 || MapName() == eMaps.mp_rr_desertlands__mu1_tt || MapName() == eMaps.mp_rr_desertlands_mu2 || MapName() == eMaps.mp_rr_desertlands_holiday )
 		player.SetOrigin(<10377.2695, 6253.86523, -4303.90625>)
 	else
 		player.SetOrigin(onGroundLocationPos)
@@ -2456,12 +2547,12 @@ entity function FlowState_CreateDeathBox( entity player, vector origin)
 		"R5R_AyeZee",
 		"R5R_Makimakima",
 		"R5R_Endergreen12",
-		"R5R_Zer0Bytes", //not cool
+		"R5R_Zer0Bytes",
 		"R5R_Julefox",
-		"R5R_Amos",
+		"R5R_AmosMods",
 		"R5R_Rexx",
 		"R5R_IcePixelx", 
-		"R5R_KralRindo",
+		"R5R_LorryLeKral",
 		"R5R_sal"
 	]
 
@@ -2668,7 +2759,7 @@ void function OnStraferDummyDamaged( entity dummy, var damageInfo )
 	//fake helmet
 	float headshotMultiplier = GetHeadshotDamageMultiplierFromDamageInfo(damageInfo)
 	float basedamage = DamageInfo_GetDamage(damageInfo)/headshotMultiplier
-	lastDmg++
+	damaged = 1
 	
 	if(IsValidHeadShot( damageInfo, dummy ))
 	{
@@ -2834,7 +2925,6 @@ void function OnDummyKilled(entity ent, var damageInfo)
 	attacker.p.straferDummyKilledCount++
 	Remote_CallFunction_NonReplay(attacker, "ServerCallback_LiveStatsUIDummiesKilled", attacker.p.straferDummyKilledCount)
 	ChallengesEntities.dummies.removebyvalue(ent)
-	lastDmg = 0
 }
 
 void function OnWeaponAttackChallenges( entity player, entity weapon, string weaponName, int ammoUsed, vector attackOrigin, vector attackDir )
@@ -2913,7 +3003,6 @@ int function ReturnShieldAmountForDesiredLevel()
 }
 
 array<entity> function CreateFloorAtOrigin(vector origin, int width, int length)
-//By michae\l/#1125 incredibly optimized. i am speed
 {
 	int x = int(origin.x)
 	int y = int(origin.y)
@@ -2932,7 +3021,6 @@ array<entity> function CreateFloorAtOrigin(vector origin, int width, int length)
 }
 
 array<entity> function CreateWallAtOrigin(vector origin, int length, int height, int angle)
-//By michae\l/#1125 incredibly optimized. i am speed
 {
 	int x = int(origin.x)
 	int y = int(origin.y)
@@ -3032,7 +3120,8 @@ bool function CC_StartChallenge4( entity player, array<string> args )
 bool function CC_StartChallenge5( entity player, array<string> args )
 {
 	PreChallengeStart(player, 10)
-	thread StartTileFrenzyChallenge(player)
+	//thread StartTileFrenzyChallenge(player)
+	thread ReplayRecorded(player)
 	return false
 }
 
@@ -3207,18 +3296,18 @@ bool function CC_AimTrainer_INMORTAL_TARGETS( entity player, array<string> args 
 
 bool function CC_AimTrainer_USER_WANNA_BE_A_DUMMY( entity player, array<string> args )
 {
-	if(args[0] == "2")
+	if(args[0] == "0")
 	{
 		AimTrainer_USER_WANNA_BE_A_DUMMY = false
-		player.SetBodyModelOverride( $"" )
-		player.SetArmsModelOverride( $"" )
+		//player.SetBodyModelOverride( $"" )
+		//player.SetArmsModelOverride( $"" )
 	}
-	else if(args[0] == "3")
+	else if(args[0] == "1")
 	{
 		AimTrainer_USER_WANNA_BE_A_DUMMY = true
-		player.SetBodyModelOverride( $"mdl/humans/class/medium/pilot_medium_generic.rmdl" )
-		player.SetArmsModelOverride( $"mdl/humans/class/medium/pilot_medium_generic.rmdl" )
-		player.SetSkin(RandomIntRange(1,5))
+		//player.SetBodyModelOverride( $"mdl/humans/class/medium/pilot_medium_generic.rmdl" )
+		//player.SetArmsModelOverride( $"mdl/humans/class/medium/pilot_medium_generic.rmdl" )
+		//player.SetSkin(RandomIntRange(1,5))
 	}
 	return false
 }
@@ -3261,7 +3350,7 @@ bool function CC_MenuGiveAimTrainerWeapon( entity player, array<string> args )
 	
 	string weapon = args[0]
 	
-	bool bIs1v1 = g_is1v1GameType() //idc, conditional.	
+	bool bIs1v1 = g_bIs1v1GameType() //idc, conditional.	
 	if( Gamemode() != eGamemodes.fs_aimtrainer && !ValidateWeaponTgiveSettings( player, args[0] ) || Gamemode() == eGamemodes.WINTEREXPRESS && !player.GetPlayerNetBool( "WinterExpress_IsPlayerAllowedLegendChange" ) )
 		return true
 	
@@ -3635,7 +3724,7 @@ bool function CC_MenuGiveAimTrainerWeapon( entity player, array<string> args )
 		
 			if( args[1] == "p" )
 			{
-				player.p.ratelimit = 0.0;				
+				ResetRate( player )	//todo track down need		
 			
 					wep1Array[0] = "wepmenu"; //print_string_array( wep1Array )
 				
@@ -3647,16 +3736,16 @@ bool function CC_MenuGiveAimTrainerWeapon( entity player, array<string> args )
 			{		
 				array<string> wep2Array = split( weaponname2, " " )
 				
-					if ( wep2Array[1] == "s" )
-					{
-						player.p.ratelimit = 0;	
+				if ( wep2Array[1] == "s" )
+				{
+					ResetRate( player )	//todo track down need	
+				
+						wep2Array[0] = "wepmenu"; //print_string_array( wep2Array )	
 					
-							wep2Array[0] = "wepmenu"; //print_string_array( wep2Array )	
-						
-								ClientCommand_GiveWeapon( player, wep2Array )	
-									
-									return true
-					}												
+							ClientCommand_GiveWeapon( player, wep2Array )	
+								
+								return true
+				}
 			}
 		}
 		else 
@@ -3681,21 +3770,6 @@ bool function CC_MenuGiveAimTrainerWeapon( entity player, array<string> args )
 
 		if( weaponent.UsesClipsForAmmo() )
 			weaponent.SetWeaponPrimaryClipCount( weaponent.GetWeaponPrimaryClipCountMax() )	
-	}
-
-	if( Playlist() == ePlaylists.fs_aimtrainer )
-	{
-		switch( weaponent.GetWeaponClassName() )
-		{
-			case "mp_weapon_car":
-				weaponSkin = weaponent.GetSkinIndexByName( "charm_preview_black" )
-				break
-			case "mp_weapon_wingman":
-			case "mp_weapon_r97":
-				weaponModelIndex = 2
-				weaponSkin = RandomInt( weaponent.GetSkinCount() )
-				break
-		}
 	}
 	
 	if(slot == "p")
