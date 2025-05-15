@@ -1,22 +1,3 @@
-/*
-Flowstate Aim Trainer v1.0 - Made by CafeFPS (server, client, ui)
-Discord: @CafeFPS | Twitter: @CafeFPS
-Support me: https://ko-fi.com/r5r_colombia
-
-More credits:
-- Skeptation#4002 -- beta tester and coworker https://www.youtube.com/c/Skeptation
-- Amos#1368 & contributors -- sdk https://github.com/Mauler125/r5sdk/tree/indev
-- rexx#1287 & contributors -- repak tool https://github.com/r-ex/RePak
-- Zee#6969 -- weapons buy menu example, history ui pages
-- Darkes#8647 -- beta tester
-- Rego#2848 -- beta tester
-- michae\l/#1125 -- beta tester
-- James9950#5567 -- beta tester
-- (--__GimmYnkia__--)#2995 -- beta tester
-- oliver#1375 -- beta tester
-- Rin 暗#5862 -- beta tester
-*/
-
 global function  Cl_ChallengesByColombia_Init
 
 //Main menu and results UI
@@ -121,19 +102,7 @@ void function Cl_ChallengesByColombia_Init()
 {
 	//Increase client command limit to 60
 	SetConVarInt("cl_quota_stringCmdsPerSecond", 60)
-	SetConVarInt("net_processTimeBudget", 0)
 	SetConVarInt("script_server_fps", 20)
-
-	//I don't want these things in user screen even if they launch in debug
-	SetConVarBool( "cl_showpos", false )
-	SetConVarBool( "cl_showfps", false )
-	SetConVarBool( "cl_showgpustats", false )
-	SetConVarBool( "cl_showsimstats", false )
-	SetConVarBool( "host_speeds", false )
-	SetConVarBool( "con_drawnotify", false )
-	SetConVarBool( "enable_debug_overlays", false )
-	//SetConVarInt( "sq_showvmoutput", 1 )
-	//SetConVarInt( "sq_showvmwarning", 2 )
 	
 	//main menu cameras thread end signal
 	RegisterSignal("ChallengeStartRemoveCameras")
@@ -401,45 +370,57 @@ void function CoolCameraOnMenu()
 		case eMaps.mp_rr_desertlands_64k_x_64k:
 		case eMaps.mp_rr_desertlands_64k_x_64k_nx:
 		case eMaps.mp_rr_desertlands_64k_x_64k_tt:
-		cutsceneSpawns.append(NewCameraPair(<10881.2295, 5903.09863, -3176.7959>, <0, -143.321213, 0>)) 
-		cutsceneSpawns.append(NewCameraPair(<9586.79199, 24404.5898, -2019.6366>, <0, -52.6216431, 0>)) 
-		cutsceneSpawns.append(NewCameraPair(<630.249573, 13375.9219, -2736.71948>, <0, -43.2706299, 0>))
-		cutsceneSpawns.append(NewCameraPair(<16346.3076, -34468.9492, -1109.32153>, <0, -44.3879509, 0>))
-		cutsceneSpawns.append(NewCameraPair(<1133.25562, -20102.9648, -2488.08252>, <0, -24.9140873, 0>))
+		case eMaps.mp_rr_desertlands_mu1:
+		case eMaps.mp_rr_desertlands_mu1_tt:
+		case eMaps.mp_rr_desertlands_mu2:
+		case eMaps.mp_rr_desertlands_holiday:
+			cutsceneSpawns.append(NewCameraPair(<10881.2295, 5903.09863, -3176.7959>, <0, -143.321213, 0>)) 
+			cutsceneSpawns.append(NewCameraPair(<9586.79199, 24404.5898, -2019.6366>, <0, -52.6216431, 0>)) 
+			cutsceneSpawns.append(NewCameraPair(<630.249573, 13375.9219, -2736.71948>, <0, -43.2706299, 0>))
+			cutsceneSpawns.append(NewCameraPair(<16346.3076, -34468.9492, -1109.32153>, <0, -44.3879509, 0>))
+			cutsceneSpawns.append(NewCameraPair(<1133.25562, -20102.9648, -2488.08252>, <0, -24.9140873, 0>))
 		break
 		
-		case eMaps.mp_flowstate:
+		case eMaps.mp_rr_arena_empty:
 		case eMaps.mp_rr_canyonlands_staging:
-		cutsceneSpawns.append(NewCameraPair(<32645.04,-9575.77,-25911.94>, <7.71,91.67,0.00>)) 
-		cutsceneSpawns.append(NewCameraPair(<49180.1055, -6836.14502, -23461.8379>, <0, -55.7723808, 0>)) 
-		cutsceneSpawns.append(NewCameraPair(<43552.3203, -1023.86182, -25270.9766>, <0, 20.9528542, 0>))
-		cutsceneSpawns.append(NewCameraPair(<30038.0254, -1036.81982, -23369.6035>, <55, -24.2035522, 0>))
+			cutsceneSpawns.append(NewCameraPair(<32645.04,-9575.77,-25911.94>, <7.71,91.67,0.00>)) 
+			cutsceneSpawns.append(NewCameraPair(<49180.1055, -6836.14502, -23461.8379>, <0, -55.7723808, 0>)) 
+			cutsceneSpawns.append(NewCameraPair(<43552.3203, -1023.86182, -25270.9766>, <0, 20.9528542, 0>))
+			cutsceneSpawns.append(NewCameraPair(<30038.0254, -1036.81982, -23369.6035>, <55, -24.2035522, 0>))
 		break
 
 		case eMaps.mp_rr_canyonlands_mu1:
 		case eMaps.mp_rr_canyonlands_mu1_night:
 		case eMaps.mp_rr_canyonlands_64k_x_64k:
-		cutsceneSpawns.append(NewCameraPair(<-7984.68408, -16770.2031, 3972.28271>, <0, -158.605301, 0>)) 
-		cutsceneSpawns.append(NewCameraPair(<-19691.1621, 5229.45264, 4238.53125>, <0, -54.6054993, 0>))
-		cutsceneSpawns.append(NewCameraPair(<13270.0576, -20413.9023, 2999.29468>, <0, 98.6180649, 0>))
-		cutsceneSpawns.append(NewCameraPair(<-25250.0391, -723.554199, 3427.51831>, <0, -55.5126762, 0>))
+		case eMaps.mp_rr_canyonlands_mu2:
+		case eMaps.mp_rr_canyonlands_mu2_tt:
+		case eMaps.mp_rr_canyonlands_mu2_mv:
+		case eMaps.mp_rr_canyonlands_mu2_ufo:
+			cutsceneSpawns.append(NewCameraPair(<-7984.68408, -16770.2031, 3972.28271>, <0, -158.605301, 0>)) 
+			cutsceneSpawns.append(NewCameraPair(<-19691.1621, 5229.45264, 4238.53125>, <0, -54.6054993, 0>))
+			cutsceneSpawns.append(NewCameraPair(<13270.0576, -20413.9023, 2999.29468>, <0, 98.6180649, 0>))
+			cutsceneSpawns.append(NewCameraPair(<-25250.0391, -723.554199, 3427.51831>, <0, -55.5126762, 0>))
+		break
+		
+		case eMaps.mp_rr_arena_phase_runner:
+			cutsceneSpawns.append(NewCameraPair(<-7984.68408, -16770.2031, 3972.28271>, <0, -158.605301, 0>)) 
+			cutsceneSpawns.append(NewCameraPair(<-19691.1621, 5229.45264, 4238.53125>, <0, -54.6054993, 0>))
+			cutsceneSpawns.append(NewCameraPair(<13270.0576, -20413.9023, 2999.29468>, <0, 98.6180649, 0>))
+			cutsceneSpawns.append(NewCameraPair(<-25250.0391, -723.554199, 3427.51831>, <0, -55.5126762, 0>))
 		break
 
-		case eMaps.mp_rr_olympus_mu1:
-		cutsceneSpawns.append(NewCameraPair(<-34747.9766, 16697.9922, -3418.06567>, <0, -25, 0>))
-		cutsceneSpawns.append(NewCameraPair(<-22534.2168, 3191.64282, -4614.2583>, <0, -96.9278641, 0>))
-		cutsceneSpawns.append(NewCameraPair(<-43278.6406, -13421.3818, -2568.48071>, <0, 60.0252533, 0>))
-		cutsceneSpawns.append(NewCameraPair(<-227.150497, -15917.8672, -3549.59814>, <0, -8.99629879, 0>))
-		cutsceneSpawns.append(NewCameraPair(<23119.459, -19445.4551, -3955.37915>, <0, 59.2959213, 0>))
-		cutsceneSpawns.append(NewCameraPair(<11381.1982, -3206.40552, -3129.646>, <0, 19.5211906, 0>))
-		cutsceneSpawns.append(NewCameraPair(<-11880.9453, 13690.4688, -3865.60645>, <0, -78.4126205, 0>))
-		cutsceneSpawns.append(NewCameraPair(<7088.45898, 25559.4492, -40.745079>, <0, -40.4022217, 0>))
-		cutsceneSpawns.append(NewCameraPair(<-19851.1211, 16372.2002, -5309.15869>, <0, -169.298721, 0>))
+		case eMaps.mp_rr_olympus:
+		case eMaps.mp_rr_olympus_tt:
+			cutsceneSpawns.append(NewCameraPair(<-34747.9766, 16697.9922, -3418.06567>, <0, -25, 0>))
+			cutsceneSpawns.append(NewCameraPair(<-22534.2168, 3191.64282, -4614.2583>, <0, -96.9278641, 0>))
+			cutsceneSpawns.append(NewCameraPair(<-43278.6406, -13421.3818, -2568.48071>, <0, 60.0252533, 0>))
+			cutsceneSpawns.append(NewCameraPair(<-227.150497, -15917.8672, -3549.59814>, <0, -8.99629879, 0>))
+			cutsceneSpawns.append(NewCameraPair(<23119.459, -19445.4551, -3955.37915>, <0, 59.2959213, 0>))
+			cutsceneSpawns.append(NewCameraPair(<11381.1982, -3206.40552, -3129.646>, <0, 19.5211906, 0>))
+			cutsceneSpawns.append(NewCameraPair(<-11880.9453, 13690.4688, -3865.60645>, <0, -78.4126205, 0>))
+			cutsceneSpawns.append(NewCameraPair(<7088.45898, 25559.4492, -40.745079>, <0, -40.4022217, 0>))
+			cutsceneSpawns.append(NewCameraPair(<-19851.1211, 16372.2002, -5309.15869>, <0, -169.298721, 0>))
 		break
-
-		case eMaps.mp_rr_aqueduct_night:
-		cutsceneSpawns.append(NewCameraPair(<0, 0, 0>, <0, 0, 0>))
-
 		default:
 		// cutsceneSpawns.append(NewCameraPair(<-3096.13501, 632.377991, 1913.47217>, <0, -134.430405, 0> ))
 		
@@ -1021,19 +1002,19 @@ void function ChangeAimTrainer_STRAFING_SPEEDClient(string desiredSpeed)
 	
 	switch(int(desiredSpeed)){
 	case 0:
-		speed = 1
+		speed = 0
 		break
 	case 1:
-		speed = 2
+		speed = 0.85
 		break
 	case 2:
-		speed = 3
+		speed = 1
 		break
 	case 3:
-		speed = 4
+		speed = 1.35
 		break
 	case 4:
-		speed = 5
+		speed = 1.8
 		break
 	}
 	
@@ -1116,9 +1097,9 @@ void function ChangeAimTrainer_INMORTAL_TARGETSClient(string isabool)
 void function ChangeAimTrainer_USER_WANNA_BE_A_DUMMYClient(string isabool)
 {
 	entity player = GetLocalClientPlayer()
-	if(isabool == "2")
+	if(isabool == "0")
 		AimTrainer_USER_WANNA_BE_A_DUMMY = false
-	else if(isabool == "3")
+	else if(isabool == "1")
 		AimTrainer_USER_WANNA_BE_A_DUMMY = true
 	
 	player.ClientCommand("CC_AimTrainer_USER_WANNA_BE_A_DUMMY " + isabool)
