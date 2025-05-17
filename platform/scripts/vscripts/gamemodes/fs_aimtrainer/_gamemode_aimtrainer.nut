@@ -32,8 +32,6 @@ struct{
 	array<var> recordingAnims
 }file
 
-int damaged
-
 table<int, array<ChallengeScore> > ChallengesData //implement this
 table<int, int> ChallengesBestScores
 
@@ -254,26 +252,6 @@ vector function AimTrainerOriginToGround( vector origin )
 	return traceResult.endPos
 }
 
-table<string, string> function GetDirection()
-{
-	table<string, string> rv
-	if(CoinFlip()) rv = rightActions
-	else rv = leftActions
-	return rv
-}
-
-float function GetAngleDiff(entity player, entity ai)
-{
-	vector aiPos = ai.GetOrigin() + -player.GetOrigin()
-	float dist = Length2D(aiPos)
-	if(dist <= 400)
-	{
-		return 1.0
-	}
-	vector projectedPos = player.GetOrigin() + AnglesToForward(player.GetAngles())*dist + -player.GetOrigin()
-	return DotProduct(Normalize(<aiPos.x, aiPos.y, 0>), Normalize(<projectedPos.x, projectedPos.y, 0>))
-}
-
 void function AssignCharacter( entity player, int index )
 {
 	ItemFlavor PersonajeEscogido = GetAllCharacters()[index]
@@ -360,7 +338,7 @@ void function StartStraferDummyChallenge(entity player)
 		vector pos = dummy.GetOrigin()
 		vector angles = dummy.GetAngles()
 		StartParticleEffectInWorld( GetParticleSystemIndex( FIRINGRANGE_ITEM_RESPAWN_PARTICLE ), pos, angles )
-		// SetSpawnOption_AISettings( dummy, "npc_dummie_combat_trainer" )
+		SetSpawnOption_AISettings( dummy, "npc_dummie_combat_trainer" )
 		DispatchSpawn( dummy )
 		dummy.SetOrigin(dummy.GetOrigin() + Vector(0,0,1))
 		dummy.SetAngles(player.GetAngles() + Vector(0, 180, 0))
@@ -380,6 +358,47 @@ void function StartStraferDummyChallenge(entity player)
 	}
 }
 
+table<string, string> function GetDirection()
+{
+	table<string, string> rv
+	if(CoinFlip()) rv = rightActions
+	else rv = leftActions
+	return rv
+}
+
+TraceResults function GetTraceResFromPositionToCrosshair( entity player, entity ai )
+{
+	vector startPos = player.EyePosition()
+	vector aiPos = ai.GetOrigin() + -startPos
+	float dist = Length2D(aiPos)
+
+	vector traceEnd          = startPos + (player.GetViewVector() * dist)
+	array<entity> ignoreEnts = [ player ]
+	TraceResults res = TraceLine( startPos, traceEnd, ignoreEnts, TRACE_MASK_SHOT, TRACE_COLLISION_GROUP_NONE )
+
+	return res
+}
+
+bool function OnTarget( TraceResults res )
+{
+	bool rv = false
+	if(IsValid(res.hitEnt) && res.hitEnt.IsNPC()) rv = true
+	return rv
+}
+
+table<string, string> function GetDirectionFromTraceRes( TraceResults res, entity ai)
+{
+	vector vec = res.endPos
+	//if(OnTarget(res)) return GetDirection()
+	table<string, string> rv
+	float right = Length2D(vec - ai.GetOrigin() + ai.GetRightVector())
+	float left = Length2D(vec - ai.GetOrigin() + -ai.GetRightVector())
+	if(right < left) rv = rightActions
+	else if(left < right) rv = leftActions
+	else rv = GetDirection()
+	return rv
+}
+
 void function StrafeMovement(entity ai, entity player)
 {
 	table<string, string> lastDir = {}
@@ -387,15 +406,16 @@ void function StrafeMovement(entity ai, entity player)
 	int started
 	int maxS
 	int minS
-	int dodged
 	int dodgedCD
 	int length
 	int maxLength
+	int lookatyou
 	int stutter
+	int randomADSpam = RandomIntRangeInclusive(0, 12)
+	int randomBiasDemon = RandomIntRangeInclusive(0, 12)
+	int randomDodgeCD = RandomIntRangeInclusive(-3, -1)
 	float spd = 1.33
-	float lastAngleDiff = 1
-	float currentAngleDiff = 1
-	array<float> angleDiffs = []
+	TraceResults res
 
 	if(AimTrainer_USER_WANNA_BE_A_DUMMY)
 	{
@@ -439,84 +459,101 @@ void function StrafeMovement(entity ai, entity player)
 		}
 	)
 
-	//ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
+	ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
 	while(IsValid(ai))
 	{
+		//while(true)
+		//{
+		//	ai.Anim_ScriptedPlayActivityByName("ACT_STAND", true, 0.1)
+		//	ai.Anim_SetPlaybackRate(1)
+		//	wait 1
+		//}
 		if(!started)
 		{
 			curDir = GetDirection()
+			started = 1
 			ai.Anim_ScriptedPlayActivityByName(curDir.curDir, true, 0.1)
 			ai.Anim_SetPlaybackRate(spd)
-			started = 1
+		}
+		else
+		{
+			curDir = GetDirectionFromTraceRes(res, ai)
+			//Message(player, curDir.curDir)
 		}
 
-		curDir = GetDirection()
-		currentAngleDiff = 0
 		length = 0
-		dodged = 0
-		damaged = 1
 		dodgedCD++
+		
 		maxLength = RandomIntRangeInclusive(minS, maxS)
 		while(length <= maxLength)
 		{
-			if(CoinFlip()) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
-			if(dodgedCD >= 0 && !damaged)
+			//if(CoinFlip()) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
+			lookatyou = RandomIntRangeInclusive(0, 1)
+			if(dodgedCD >= 0)
 			{
-				for(int i = 0; i <= 11; i ++)
+				if(!OnTarget(res))
 				{
-					if(CoinFlip()) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
-					WaitFrame()
-					if(damaged)
+					for(int i = 0; i <= 11; i ++)
 					{
-						//Message(player, "Breaking")
-						break
+						WaitFrame()
+						if(lookatyou) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
+						res = GetTraceResFromPositionToCrosshair(player, ai)
+						if(OnTarget(res))
+						{
+							//Message(player, "random")
+							int random = RandomIntRangeInclusive(0, 11)
+							if(random < min(randomADSpam, randomBiasDemon)) length = maxLength - 1 - RandomIntRangeInclusive(0, 5)
+							else if(random < max(randomADSpam, randomBiasDemon)) length -= maxLength
+							break
+						}
 					}
 				}
-				dodgedCD = -2
+				else
+				{
+					//Message(player, "random2")
+					int random = RandomIntRangeInclusive(0, 11)
+					if(random < min(randomADSpam, randomBiasDemon)) length = maxLength - 1 - RandomIntRangeInclusive(0, 5)
+					else if(random < max(randomADSpam, randomBiasDemon)) length -= maxLength
+				}
+				dodgedCD = randomDodgeCD
 			}
 			else if(curDir != lastDir)
 			{
 				ai.Anim_ScriptedPlayActivityByName(curDir.oppTmpDir, false, 0.1)
 				WaitFrame()
+				if(lookatyou) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
 				ai.Anim_ScriptedPlayActivityByName(curDir.curDir, true, 0.1)
 				ai.Anim_SetPlaybackRate(spd)
 				lastDir = curDir
 			}
 			else if(length == maxLength)
 			{
-				foreach(diff in angleDiffs) currentAngleDiff += diff
-				currentAngleDiff = currentAngleDiff/angleDiffs.len()
-				angleDiffs = []
-				if((angleDiffs.len() < 3 && currentAngleDiff <= 0.99925) || (angleDiffs.len() >= 3 && currentAngleDiff <= 0.9995))
-				{
-					//Message(player, "Bias", currentAngleDiff.tostring())
-					length -= maxLength
-					dodgedCD = 0
-				}
-				if(CoinFlip()) stutter = RandomIntRangeInclusive(2, 4)
+				if(CoinFlip()) stutter = RandomIntRangeInclusive(2, 5)
 				else stutter = RandomIntRangeInclusive(minS, maxLength)
 				ai.Anim_ScriptedPlayActivityByName(curDir.tmpDir, false, 0.1)
 				ai.Anim_SetPlaybackRate(0.5)
 				WaitFrame()
+				if(lookatyou) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
 				ai.Anim_ScriptedPlayActivityByName(curDir.oppDir, true, 0.1)
 				ai.Anim_SetPlaybackRate(spd)
+				
+				lookatyou = RandomIntRangeInclusive(0, 1)
 				for(int i = 0; i < stutter; i ++)
 				{
-					if(CoinFlip()) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
 					WaitFrame()
-					angleDiffs.append(GetAngleDiff(player, ai))
+					if(lookatyou) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
 				}
-				if(CoinFlip()) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
 				ai.Anim_ScriptedPlayActivityByName(curDir.oppTmpDir, false, 0.1)
 				ai.Anim_SetPlaybackRate(0.5)
 				WaitFrame()
+				if(lookatyou) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
 				ai.Anim_ScriptedPlayActivityByName(curDir.curDir, true, 0.1)
 				ai.Anim_SetPlaybackRate(spd)
 			}
 			WaitFrame()
+			if(lookatyou) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
 			length++
-			angleDiffs.append(GetAngleDiff(player, ai))
-			damaged = 0
+			res = GetTraceResFromPositionToCrosshair(player, ai)
 		}
 	}
 }
@@ -2759,7 +2796,6 @@ void function OnStraferDummyDamaged( entity dummy, var damageInfo )
 	//fake helmet
 	float headshotMultiplier = GetHeadshotDamageMultiplierFromDamageInfo(damageInfo)
 	float basedamage = DamageInfo_GetDamage(damageInfo)/headshotMultiplier
-	damaged = 1
 	
 	if(IsValidHeadShot( damageInfo, dummy ))
 	{
