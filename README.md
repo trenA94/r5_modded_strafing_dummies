@@ -7,3 +7,5 @@ The bot also doesn't perfectly "track" you(still needs some work). This will giv
 Replaced Tile Frenzy with recording of your movement during Strafing Dummy challenge.
 
 Unzip and place platform folder into r5 directory.
+
+NOTE: This will never be a replacement for real human strafes, so don't use this as a replacement for normal 1v1s.
