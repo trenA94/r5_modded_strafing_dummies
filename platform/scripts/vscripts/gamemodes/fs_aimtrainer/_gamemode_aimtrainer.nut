@@ -406,14 +406,14 @@ void function StrafeMovement(entity ai, entity player)
 	int started
 	int maxS
 	int minS
-	int dodgedCD
+	int dodgeCD
 	int length
 	int maxLength
 	int lookatyou
 	int stutter
-	int randomADSpam = RandomIntRangeInclusive(0, 12)
-	int randomBiasDemon = RandomIntRangeInclusive(0, 12)
+	int random = RandomIntRangeInclusive(0, 8)
 	int randomDodgeCD = RandomIntRangeInclusive(-3, -1)
+	int dodger = RandomIntRangeInclusive(0, 4)
 	float spd = 1.33
 	TraceResults res
 
@@ -477,19 +477,20 @@ void function StrafeMovement(entity ai, entity player)
 		}
 		else
 		{
-			curDir = GetDirectionFromTraceRes(res, ai)
+			if(dodger && RandomIntRangeInclusive(0, 4)) curDir = GetDirectionFromTraceRes(res, ai)
+			else curDir = GetDirection()
 			//Message(player, curDir.curDir)
 		}
 
 		length = 0
-		dodgedCD++
+		dodgeCD++
 		
 		maxLength = RandomIntRangeInclusive(minS, maxS)
 		while(length <= maxLength)
 		{
 			//if(CoinFlip()) ai.SetAngles(VectorToAngles(player.GetOrigin() - ai.GetOrigin()))
 			lookatyou = RandomIntRangeInclusive(0, 1)
-			if(dodgedCD >= 0)
+			if(dodger && dodgeCD >= 0)
 			{
 				if(!OnTarget(res))
 				{
@@ -501,9 +502,8 @@ void function StrafeMovement(entity ai, entity player)
 						if(OnTarget(res))
 						{
 							//Message(player, "random")
-							int random = RandomIntRangeInclusive(0, 11)
-							if(random < min(randomADSpam, randomBiasDemon)) length = maxLength - 1 - RandomIntRangeInclusive(0, 5)
-							else if(random < max(randomADSpam, randomBiasDemon)) length -= maxLength
+							if(random < 3 ) length = maxLength - 1 - RandomIntRangeInclusive(0, 5)
+							else if(random < 6) length -= maxLength + RandomIntRangeInclusive(0, 5)
 							break
 						}
 					}
@@ -511,11 +511,10 @@ void function StrafeMovement(entity ai, entity player)
 				else
 				{
 					//Message(player, "random2")
-					int random = RandomIntRangeInclusive(0, 11)
-					if(random < min(randomADSpam, randomBiasDemon)) length = maxLength - 1 - RandomIntRangeInclusive(0, 5)
-					else if(random < max(randomADSpam, randomBiasDemon)) length -= maxLength
+					if(random < 3 ) length = maxLength - 1 - RandomIntRangeInclusive(0, 5)
+					else if(random < 6) length -= maxLength + RandomIntRangeInclusive(0, 5)
 				}
-				dodgedCD = randomDodgeCD
+				dodgeCD = randomDodgeCD
 			}
 			else if(curDir != lastDir)
 			{
